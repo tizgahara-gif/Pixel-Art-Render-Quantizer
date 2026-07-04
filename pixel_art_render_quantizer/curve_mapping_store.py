@@ -112,8 +112,33 @@ def recreate_assignment_curve_owner(scene):
     return node
 
 
-def get_assignment_curve_owner(scene):
-    """Return the internal node that owns PAQ's CurveMapping, or None."""
+def find_assignment_curve_owner():
+    """
+    Return the existing PAQ assignment curve node without creating or modifying
+    ID datablocks. Safe to call from Panel.draw().
+    """
+    if bpy is None:
+        return None
+
+    tree = bpy.data.node_groups.get(NODE_TREE_NAME)
+    if tree is None:
+        return None
+
+    return tree.nodes.get(NODE_NAME)
+
+
+def find_assignment_curve_mapping():
+    """Return an existing PAQ CurveMapping without creating or modifying data."""
+    owner = find_assignment_curve_owner()
+    return getattr(owner, "mapping", None) if owner is not None else None
+
+
+def get_or_create_assignment_curve_owner(scene):
+    """
+    Return PAQ's assignment curve node, creating and initializing it if needed.
+
+    Operator/startup-only helper. Do not call from Panel.draw().
+    """
     if bpy is None:
         return None
     tree = bpy.data.node_groups.get(NODE_TREE_NAME)
@@ -128,20 +153,24 @@ def get_assignment_curve_owner(scene):
         node.label = "PAQ Internal Assignment Curve"
         created = True
     if created and hasattr(node, "mapping"):
-        # Do not crash UI draw if Blender refuses CurveMap edits. The default
-        # CurveMapping remains a usable fallback until the next successful reset.
         initialize_assignment_curve_mapping(node.mapping, assignment_curve_points_from_scene(scene))
     return node
 
 
-def get_assignment_curve_mapping(scene):
-    """
-    Return a Blender CurveMapping object used by PAQ Palette Assignment Curve.
-
-    This must not modify the user's compositor node setup.
-    """
-    owner = get_assignment_curve_owner(scene)
+def get_or_create_assignment_curve_mapping(scene):
+    """Return PAQ's CurveMapping, creating and initializing it if needed."""
+    owner = get_or_create_assignment_curve_owner(scene)
     return getattr(owner, "mapping", None) if owner is not None else None
+
+
+def get_assignment_curve_owner(scene):
+    """Deprecated alias for operator-only creation helper."""
+    return get_or_create_assignment_curve_owner(scene)
+
+
+def get_assignment_curve_mapping(scene):
+    """Deprecated alias for operator-only creation helper."""
+    return get_or_create_assignment_curve_mapping(scene)
 
 
 def reset_assignment_curve_mapping(scene):

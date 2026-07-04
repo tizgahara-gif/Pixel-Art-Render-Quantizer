@@ -9,7 +9,7 @@ from .alpha import apply_alpha
 from .outline import apply_outline
 from .render_pipeline import render_lowres_to_pixels, upscale_nearest
 from .image_output import pixels_to_image, show_image_in_editors
-from .curve_mapping_store import get_assignment_curve_mapping, assignment_curve_points_from_scene
+from .curve_mapping_store import get_or_create_assignment_curve_mapping, assignment_curve_points_from_scene
 
 def palette_for_scene(scene, palette_id):
     if palette_id in BUILTIN_PALETTES:
@@ -33,7 +33,7 @@ def process_pixels(scene, pixels, w, h):
     assignment_curve_lut = None
     if scene.pixel_render_assignment_curve_enabled:
         try:
-            mapping = get_assignment_curve_mapping(scene)
+            mapping = get_or_create_assignment_curve_mapping(scene)
             assignment_curve_lut = build_assignment_curve_lut_from_mapping(mapping, size=256) if mapping else None
         except Exception:
             assignment_curve_lut = None
