@@ -27,7 +27,14 @@ def count_unique_rgb(pixels):
 
 def process_pixels(scene, pixels, w, h):
     colors,reserved,usable,enabled=palette_for_scene(scene, scene.pixel_render_look_palette_id)
-    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,enabled_indices=enabled,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation)
+    assignment_curve_points = [
+        (0.0, scene.pixel_render_assignment_curve_black),
+        (0.25, scene.pixel_render_assignment_curve_shadow),
+        (0.5, scene.pixel_render_assignment_curve_mid),
+        (0.75, scene.pixel_render_assignment_curve_light),
+        (1.0, scene.pixel_render_assignment_curve_white),
+    ]
+    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,enabled_indices=enabled,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation,assignment_curve_enabled=scene.pixel_render_assignment_curve_enabled,assignment_curve_points=assignment_curve_points,assignment_curve_strength=scene.pixel_render_assignment_curve_strength)
     q=apply_alpha(q,w,h,scene.pixel_render_alpha_mode,scene.pixel_render_alpha_threshold)
     if scene.pixel_render_outline_enabled:
         oi=reserved[0] if reserved else min(range(len(colors)), key=lambda i:luminance(colors[i])); q=apply_outline(q,w,h,colors[oi])

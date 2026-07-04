@@ -42,16 +42,19 @@ State symbols:
 
 Built-in palettes are read-only. To change the color limit for a built-in palette, use **Change Limit (Duplicate as Custom)** and edit the duplicated Custom Palette.
 
+## Palette Assignment Curve
 
-## Extract Palette from Render
+**Palette Assignment Curve** remaps the rendered pixel luminance before nearest palette color matching. It does not edit or regenerate palette colors; it only changes which existing palette color each processed pixel is likely to be assigned to.
 
-**Extract Palette from Render** creates a Custom Palette from the standard Blender render image before Pixel Render processing.
+Enable **Palette Assignment Curve** in **Advanced Look** to adjust the five stable Value / Luminance points: **Black**, **Shadow**, **Mid**, **Light**, and **White**. Use **Curve Strength** to blend between the original luminance and the curve result, and **Reset Curve** to restore the identity curve.
 
-You can specify the number of colors to extract. The default is 16 colors. The supported range is 2 to 256 colors.
+Examples:
 
-The extracted palette is saved as a Scene Custom Palette and is automatically selected as the Look Palette. It appears in the Palette Grid and is used by Quick Render Check. If the render has too few valid pixels or colors, the created palette may contain fewer colors than requested.
+- Lowering **Shadow** makes darker regions more likely to match darker palette colors.
+- Raising **Mid** makes midtones more likely to match brighter palette colors.
+- Lowering **Light** helps highlights avoid jumping too quickly to near-white palette colors.
 
-This feature does not pick colors from `Pixel_Render_Check`. It extracts representative colors from the normal Blender render result before Pixel Render / Palette Quantize is applied.
+Japanese: パレット色へ割り当てる前に、明度カーブで入力色を補正します。
 
 ## Camera Frame Sync
 

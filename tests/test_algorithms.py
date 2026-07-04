@@ -1,7 +1,7 @@
 from pixel_art_render_quantizer.palettes_builtin import BUILTIN_PALETTES, BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS, builtin_default_usable_count
 from pixel_art_render_quantizer.properties import default_reserved_indices, pixel_render_final_size, sync_camera_frame_to_pixel_render
 from pixel_art_render_quantizer.utils import hex_to_rgba, sanitize_palette_name
-from pixel_art_render_quantizer.quantize import select_usable_colors, quantize_pixels
+from pixel_art_render_quantizer.quantize import select_usable_colors, quantize_pixels, apply_assignment_curve_to_pixel
 from pixel_art_render_quantizer.outline import cleanup_strict_mask
 from pixel_art_render_quantizer.render_pipeline import upscale_nearest
 from pixel_art_render_quantizer.palette_io_gpl import parse_gpl, write_gpl
@@ -41,6 +41,20 @@ def test_reserved_color_excluded_and_usable_reduced():
     assert len(usable) == 3
     out = quantize_pixels([(0.0,0.0,0.0,1.0)], 1, 1, colors, [0], 3)
     assert out[0][:3] != colors[0][:3]
+
+
+def test_assignment_curve_identity():
+    points = [(0.0,0.0),(0.25,0.25),(0.5,0.5),(0.75,0.75),(1.0,1.0)]
+    p = apply_assignment_curve_to_pixel((0.4,0.4,0.4,1.0), points, 1.0)
+    assert abs(p[0] - 0.4) < 1e-6
+
+
+def test_assignment_curve_darkens_midtones():
+    points = [(0.0,0.0),(0.25,0.1),(0.5,0.25),(0.75,0.6),(1.0,1.0)]
+    p = apply_assignment_curve_to_pixel((0.5,0.5,0.5,1.0), points, 1.0)
+    assert p[0] < 0.5
+    assert p[1] < 0.5
+    assert p[2] < 0.5
 
 
 def test_nearest_upscale():
