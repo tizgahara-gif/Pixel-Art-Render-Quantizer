@@ -51,6 +51,49 @@ def load_gpl_into_scene(scene, filepath):
     pal.usable_color_count=max(1,len(colors)-len(reserved)); pal.outline_index=reserved[0] if reserved else 0; scene.pixel_render_look_palette_id=pal.id
     return pal
 
+
+def find_scene_palette(scene, palette_id):
+    for p in scene.pixel_render_palettes:
+        if p.id == palette_id:
+            return p
+    return None
+
+def validate_palette_rename(scene, palette_id, name):
+    name = sanitize_palette_name(name)
+    if not name:
+        raise ValueError('Palette name is empty')
+    if any(p.name == name and p.id != palette_id for p in scene.pixel_render_palettes):
+        raise ValueError('Duplicate palette name')
+    return name
+
+def ensure_editable_palette(scene, palette_id=None):
+    palette_id = palette_id or scene.pixel_render_look_palette_id
+    if palette_id in BUILTIN_PALETTES:
+        pal = create_custom_from_palette(scene, palette_id)
+        scene.pixel_render_look_palette_id = pal.id
+        return pal
+    pal = find_scene_palette(scene, palette_id)
+    if pal is None:
+        raise ValueError('Select a custom or imported palette')
+    return pal
+
+def clamp_selected_color_index(scene, pal):
+    count = len(pal.colors)
+    if count <= 0:
+        scene.pixel_render_selected_color_index = 0
+        return 0
+    idx = max(0, min(scene.pixel_render_selected_color_index, count - 1))
+    scene.pixel_render_selected_color_index = idx
+    return idx
+
+def set_outline_color(pal, index, enabled):
+    if enabled:
+        for i, color in enumerate(pal.colors):
+            color.use_as_outline = i == index
+        pal.outline_index = index
+    else:
+        pal.colors[index].use_as_outline = False
+
 def export_gpl_from_scene(scene, filepath):
     if not filepath:
         raise ValueError('GPL filepath is empty')
@@ -71,11 +114,26 @@ if bpy:
  class PAQ_OT_rename_palette(bpy.types.Operator):
     bl_idname='paq.rename_custom_palette'; bl_label='Rename Custom'; bl_options={'REGISTER','UNDO'}
     name:bpy.props.StringProperty(name='Palette Name')
+    def invoke(self,context,event):
+        pid=context.scene.pixel_render_look_palette_id
+        if pid in BUILTIN_PALETTES:
+            self.report({'ERROR'},'Built-in palettes are read-only. Duplicate as Custom first.')
+            return {'CANCELLED'}
+        pal=find_scene_palette(context.scene,pid)
+        if not pal:
+            self.report({'ERROR'},'Select a custom palette')
+            return {'CANCELLED'}
+        self.name=pal.name
+        return context.window_manager.invoke_props_dialog(self)
     def execute(self,context):
-        name=sanitize_palette_name(self.name); pals=context.scene.pixel_render_palettes
-        if any(p.name==name and p.id!=context.scene.pixel_render_look_palette_id for p in pals): self.report({'ERROR'},'Duplicate palette name'); return {'CANCELLED'}
-        for p in pals:
-            if p.id==context.scene.pixel_render_look_palette_id and p.type!='BUILTIN': p.name=name; return {'FINISHED'}
+        pid=context.scene.pixel_render_look_palette_id
+        if pid in BUILTIN_PALETTES:
+            self.report({'ERROR'},'Built-in palettes are read-only. Duplicate as Custom first.')
+            return {'CANCELLED'}
+        try: name=validate_palette_rename(context.scene,pid,self.name)
+        except ValueError as exc: self.report({'ERROR'},str(exc)); return {'CANCELLED'}
+        pal=find_scene_palette(context.scene,pid)
+        if pal and pal.type!='BUILTIN': pal.name=name; return {'FINISHED'}
         self.report({'ERROR'},'Select a custom palette'); return {'CANCELLED'}
  class PAQ_OT_delete_palette(bpy.types.Operator):
     bl_idname='paq.delete_custom_palette'; bl_label='Delete Custom'; bl_options={'REGISTER','UNDO'}

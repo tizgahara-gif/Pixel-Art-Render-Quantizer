@@ -1,6 +1,6 @@
 bl_info = {
     'name': 'Pixel Art Render Quantizer',
-    'author': 'OpenAI',
+    'author': 'tizgahara-gif',
     'version': (1, 0, 0),
     'blender': (3, 6, 0),
     'location': 'Compositor Sidebar, Render Properties, 3D Viewport Sidebar',

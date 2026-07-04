@@ -39,7 +39,11 @@ if bpy:
         if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
         w,h=s.pixel_render_width,s.pixel_render_height
         with temporary_render_resolution(s,w,h): bpy.ops.render.render(write_still=False)
-        img=bpy.data.images['Render Result']; pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
+        img=bpy.data.images['Render Result']
+        if hasattr(img,'size') and tuple(img.size[:2]) != (w,h):
+            self.report({'ERROR'},'Render Result size does not match Pixel Render Size. Check render border/crop settings.')
+            return {'CANCELLED'}
+        pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
         low=process_pixels(s,pixels,w,h); up,uw,uh=upscale_nearest(low,w,h,int(s.pixel_render_scale))
         out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
         if save:
