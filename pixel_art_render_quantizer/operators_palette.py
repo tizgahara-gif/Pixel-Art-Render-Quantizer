@@ -292,8 +292,21 @@ if bpy:
         s.pixel_render_assignment_curve_mid=0.5
         s.pixel_render_assignment_curve_light=0.75
         s.pixel_render_assignment_curve_white=1.0
-        reset_assignment_curve_mapping(s)
-        for area in context.screen.areas:
-            area.tag_redraw()
+        try:
+            ok = reset_assignment_curve_mapping(s)
+        except Exception as exc:
+            self.report({'ERROR'}, f'Failed to reset assignment curve: {exc}')
+            return {'CANCELLED'}
+
+        if not ok:
+            self.report({'WARNING'}, 'Assignment curve reset could not fully recreate the curve mapping.')
+        else:
+            self.report({'INFO'}, 'Assignment curve reset.')
+
+        screen = getattr(context, "screen", None)
+        if screen:
+            for area in screen.areas:
+                area.tag_redraw()
+
         return {'FINISHED'}
  classes=(PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
