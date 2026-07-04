@@ -24,7 +24,7 @@ Quick Render Check does **not** directly overwrite Blender's `Render Result`.
 The preview result is written to an Image named `Pixel_Render_Check`:
 
 - If an Image Editor area is open, the add-on automatically displays `Pixel_Render_Check` there.
-- If no Image Editor area is open, select `Pixel_Render_Check` manually from Blender's image list.
+- If no Image Editor area is open, press **Open Pixel_Render_Check** in Render Properties or select `Pixel_Render_Check` manually from Blender's image list.
 
 Render & Quantize writes the displayed result to `Pixel_Render_Quantized` and saves enabled PNG outputs to the configured output directory.
 
