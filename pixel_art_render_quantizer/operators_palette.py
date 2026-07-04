@@ -241,17 +241,27 @@ if bpy:
             )
             scene.pixel_render_look_palette_id = pal.id
 
-            from .properties import sync_selected_palette_color
+            from .properties import sync_selected_palette_color, tag_redraw_all_areas
             sync_selected_palette_color(scene)
+            tag_redraw_all_areas(context)
 
         except Exception as exc:
             self.report({'ERROR'}, f'Failed to extract palette: {exc}')
             return {'CANCELLED'}
 
-        self.report(
-            {'INFO'},
-            f'Extracted {len(colors)} colors from standard render: {pal.name}'
-        )
+        requested_count = int(self.target_count)
+        actual_count = len(colors)
+
+        if actual_count < requested_count:
+            self.report(
+                {'INFO'},
+                f'Extracted {actual_count}/{requested_count} colors from standard render: {pal.name}'
+            )
+        else:
+            self.report(
+                {'INFO'},
+                f'Extracted {actual_count} colors from standard render: {pal.name}'
+            )
         return {'FINISHED'}
  class PAQ_OT_load_gpl(bpy.types.Operator, ImportHelper):
     bl_idname='paq.load_gpl_palette'; bl_label='Load .gpl'; bl_options={'REGISTER','UNDO'}
@@ -281,4 +291,4 @@ if bpy:
         s.pixel_render_assignment_curve_light=0.75
         s.pixel_render_assignment_curve_white=1.0
         return {'FINISHED'}
- classes=(PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+ classes=(PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
