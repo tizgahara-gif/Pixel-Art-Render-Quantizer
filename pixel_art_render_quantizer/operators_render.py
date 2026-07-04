@@ -44,7 +44,12 @@ if bpy:
             self.report({'ERROR'},'Render Result size does not match Pixel Render Size. Check render border/crop settings.')
             return {'CANCELLED'}
         pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
-        low=process_pixels(s,pixels,w,h); up,uw,uh=upscale_nearest(low,w,h,int(s.pixel_render_scale))
+        try:
+            low=process_pixels(s,pixels,w,h)
+        except ValueError as exc:
+            self.report({'ERROR'},str(exc))
+            return {'CANCELLED'}
+        up,uw,uh=upscale_nearest(low,w,h,int(s.pixel_render_scale))
         out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
         if save:
             import os

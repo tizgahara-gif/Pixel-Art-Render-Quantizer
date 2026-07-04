@@ -46,7 +46,7 @@ from types import SimpleNamespace
 import pytest
 from pixel_art_render_quantizer.render_pipeline import temporary_render_resolution
 from pixel_art_render_quantizer.operators_palette import create_custom_from_palette, load_gpl_into_scene, ensure_editable_palette, validate_palette_rename, set_outline_color
-from pixel_art_render_quantizer.operators_render import individual_mode_error
+from pixel_art_render_quantizer.operators_render import individual_mode_error, palette_for_scene
 
 
 class FakeCollection(list):
@@ -119,6 +119,22 @@ def test_set_outline_color_is_exclusive_and_updates_index():
     set_outline_color(pal, 1, True)
     assert [c.use_as_outline for c in pal.colors] == [False, True, False]
     assert pal.outline_index == 1
+
+
+def test_palette_for_scene_returns_empty_enabled_indices_for_disabled_custom_palette():
+    pal = SimpleNamespace(id='custom', colors=FakeCollection(), usable_color_count=0)
+    pal.colors.extend([
+        SimpleNamespace(color=(1.0, 0.0, 0.0, 1.0), reserved=False, quantization_enabled=False),
+        SimpleNamespace(color=(0.0, 1.0, 0.0, 1.0), reserved=False, quantization_enabled=False),
+    ])
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection([pal]))
+
+    colors, reserved, usable, enabled = palette_for_scene(scene, 'custom')
+
+    assert colors == [(1.0, 0.0, 0.0, 1.0), (0.0, 1.0, 0.0, 1.0)]
+    assert reserved == []
+    assert usable == 0
+    assert enabled == []
 
 
 def test_quantize_pixels_excludes_disabled_enabled_indices():
