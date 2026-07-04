@@ -1,5 +1,6 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
+# TODO: Localize report messages.
 try:
     from bpy_extras.io_utils import ImportHelper, ExportHelper
 except ModuleNotFoundError:

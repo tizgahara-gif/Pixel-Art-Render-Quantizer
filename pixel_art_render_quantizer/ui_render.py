@@ -5,6 +5,7 @@ from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
 from .curve_mapping_store import get_assignment_curve_owner
+from .i18n import tr
 
 
 def palette_display_entries(scene):
@@ -114,33 +115,35 @@ if bpy:
         l=self.layout
         status_box = l.box()
         status_box.label(
-            text='Pixel Render: Active' if s.pixel_render_active else 'Pixel Render: Inactive',
+            text=tr(s, 'pixel_render_active') if s.pixel_render_active else tr(s, 'pixel_render_inactive'),
             icon='CHECKMARK' if s.pixel_render_active else 'CANCEL'
         )
 
+        status_box.prop(s, 'pixel_render_ui_language', text=tr(s, 'ui_language'))
+
         if s.pixel_render_active:
-            status_box.label(text=f'Mode: {s.pixel_render_mode}')
-            status_box.label(text=f'Look Palette: {s.pixel_render_look_palette_id}')
+            status_box.label(text=f"{tr(s, 'mode')}: {s.pixel_render_mode}")
+            status_box.label(text=f"{tr(s, 'look_palette')}: {s.pixel_render_look_palette_id}")
             status_box.label(
-                text=f'Pixel Size: {s.pixel_render_width} x {s.pixel_render_height}  Scale: x{s.pixel_render_scale}'
+                text=f"{tr(s, 'pixel_size')}: {s.pixel_render_width} x {s.pixel_render_height}  {tr(s, 'scale')}: x{s.pixel_render_scale}"
             )
             status_box.label(
-                text=f'Final Output: {s.pixel_render_width * int(s.pixel_render_scale)} x {s.pixel_render_height * int(s.pixel_render_scale)}'
+                text=f"{tr(s, 'final_output')}: {s.pixel_render_width * int(s.pixel_render_scale)} x {s.pixel_render_height * int(s.pixel_render_scale)}"
             )
 
         row = l.row(align=True)
         if s.pixel_render_active:
-            row.operator('paq.stop_pixel_render', text='Stop Pixel Render', icon='PAUSE')
+            row.operator('paq.stop_pixel_render', text=tr(s, 'stop_pixel_render'), icon='PAUSE')
         else:
-            row.operator('paq.start_pixel_render', text='Start Pixel Render', icon='PLAY')
+            row.operator('paq.start_pixel_render', text=tr(s, 'start_pixel_render'), icon='PLAY')
 
         l.prop(s,'pixel_render_mode');
         if s.pixel_render_mode=='INDIVIDUAL': l.label(text='Individual assignment data is stored, but rendering is not active in v1.0.', icon='ERROR')
-        l.prop(s,'pixel_render_look_palette_id',text='Look Palette'); l.operator('paq.quick_render_check'); l.operator('paq.open_pixel_render_check', text='Open Pixel_Render_Check', icon='IMAGE_DATA'); l.operator('paq.render_quantize')
-        box=l.box(); box.label(text='Output Size'); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f'Final Output Size: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}'); box.prop(s,'pixel_render_camera_frame_sync_mode', text='Camera Frame Sync')
-        box=l.box(); box.label(text='Advanced Look'); box.prop(s,'pixel_render_gamma'); box.prop(s,'pixel_render_alpha_mode'); box.prop(s,'pixel_render_alpha_threshold'); box.prop(s,'pixel_render_dither_mode'); box.prop(s,'pixel_render_dither_strength'); box.prop(s,'pixel_render_outline_enabled', text='Strict Alpha Edge Outline'); box.label(text='v1.0 outline uses alpha edges only.'); box.label(text='Object silhouette/depth outlines are not implemented yet.'); box.separator(); box.label(text='Palette Assignment Curve'); box.prop(s,'pixel_render_assignment_curve_enabled', text='Enable Assignment Curve');
+        l.prop(s,'pixel_render_look_palette_id',text=tr(s, 'look_palette')); l.operator('paq.quick_render_check', text=tr(s, 'quick_render_check')); l.operator('paq.open_pixel_render_check', text=tr(s, 'open_pixel_render_check'), icon='IMAGE_DATA'); l.operator('paq.render_quantize', text=tr(s, 'render_quantize'))
+        box=l.box(); box.label(text=tr(s, 'output_size')); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f"{tr(s, 'final_output_size')}: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}"); box.prop(s,'pixel_render_camera_frame_sync_mode', text=tr(s, 'camera_frame_sync'))
+        box=l.box(); box.label(text=tr(s, 'advanced_look')); box.prop(s,'pixel_render_gamma'); box.prop(s,'pixel_render_alpha_mode'); box.prop(s,'pixel_render_alpha_threshold'); box.prop(s,'pixel_render_dither_mode'); box.prop(s,'pixel_render_dither_strength'); box.prop(s,'pixel_render_outline_enabled', text=tr(s, 'strict_alpha_edge_outline')); box.label(text=tr(s, 'outline_alpha_only')); box.label(text=tr(s, 'object_outline_not_implemented')); box.separator(); box.label(text=tr(s, 'palette_assignment_curve')); box.prop(s,'pixel_render_assignment_curve_enabled', text=tr(s, 'enable_assignment_curve'));
         if s.pixel_render_assignment_curve_enabled:
-            box.prop(s,'pixel_render_assignment_curve_strength'); box.label(text='Drag the curve handles to remap luminance before palette matching.');
+            box.prop(s,'pixel_render_assignment_curve_strength'); box.label(text=tr(s, 'assignment_curve_help'));
             curve_owner = get_assignment_curve_owner(s)
             if curve_owner is not None and hasattr(box, 'template_curve_mapping'):
                 box.template_curve_mapping(curve_owner, 'mapping', type='NONE')
@@ -149,30 +152,30 @@ if bpy:
                 box.label(text='Using numeric fallback.')
                 box.label(text='Advanced Numeric Fallback')
                 box.prop(s,'pixel_render_assignment_curve_black'); box.prop(s,'pixel_render_assignment_curve_shadow'); box.prop(s,'pixel_render_assignment_curve_mid'); box.prop(s,'pixel_render_assignment_curve_light'); box.prop(s,'pixel_render_assignment_curve_white')
-            box.operator('paq.reset_assignment_curve', text='Reset Curve')
-        box=l.box(); box.label(text='Palette Manager')
-        box.label(text='Current Palette')
-        box.prop(s,'pixel_render_look_palette_id',text='Look Palette')
+            box.operator('paq.reset_assignment_curve', text=tr(s, 'reset_curve'))
+        box=l.box(); box.label(text=tr(s, 'palette_manager'))
+        box.label(text=tr(s, 'current_palette'))
+        box.prop(s,'pixel_render_look_palette_id',text=tr(s, 'look_palette'))
         is_builtin = s.pixel_render_look_palette_id in BUILTIN_PALETTES
-        palette_type = 'Built-in' if is_builtin else 'Custom / External'
-        box.label(text=f'Palette Type: {palette_type}')
+        palette_type = tr(s, 'built_in') if is_builtin else tr(s, 'custom_external')
+        box.label(text=f"{tr(s, 'palette_type')}: {palette_type}")
         limit_row = box.row(align=True)
-        limit_row.label(text=f'Palette Color Limit: {palette_color_limit_display(s)}')
-        box.label(text='Reserved colors are not counted.')
-        box.label(text='Disabled colors are not counted for custom/external palettes.')
+        limit_row.label(text=f"{tr(s, 'palette_color_limit')}: {palette_color_limit_display(s)}")
+        box.label(text=tr(s, 'reserved_not_counted'))
+        box.label(text=tr(s, 'disabled_not_counted'))
         if is_builtin:
-            box.operator('paq.set_palette_usable_color_count', text='Change Limit (Duplicate as Custom)')
+            box.operator('paq.set_palette_usable_color_count', text=tr(s, 'change_limit_duplicate'))
         else:
             palette = selected_palette(s)
             if palette:
-                box.prop(palette, 'usable_color_count', text='Palette Color Limit')
-                box.label(text='0 = No limit')
+                box.prop(palette, 'usable_color_count', text=tr(s, 'palette_color_limit'))
+                box.label(text=tr(s, 'no_limit'))
         box.separator()
-        box.label(text='Palette Grid')
+        box.label(text=tr(s, 'palette_grid'))
         entries = palette_display_entries(s)
-        box.label(text='Click a cell to select it. Edit its color below.')
-        box.label(text='Color chip shows palette color. ▶ marks the selected cell.')
-        box.label(text='R: Reserved / X: Disabled / O: Outline')
+        box.label(text=tr(s, 'grid_help'))
+        box.label(text=tr(s, 'grid_chip_help'))
+        box.label(text=tr(s, 'grid_legend'))
         if entries:
             columns = 4 if len(entries) <= 4 else 8
             grid = box.grid_flow(row_major=True, columns=columns, even_columns=True, even_rows=True, align=True)
@@ -194,15 +197,15 @@ if bpy:
                 op = cell.operator('paq.select_palette_grid_color', text=display_label)
                 op.index = entry['index']
         else:
-            box.label(text='No colors in the selected palette.', icon='INFO')
+            box.label(text=tr(s, 'no_colors'), icon='INFO')
         box.separator()
-        box.label(text='Selected Color Detail')
-        box.label(text='Edit the selected palette cell here.')
-        box.label(text=f'Selected HEX: {rgba_to_hex(s.pixel_render_selected_color)}')
-        box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color', text='Selected Color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
+        box.label(text=tr(s, 'selected_color_detail'))
+        box.label(text=tr(s, 'edit_selected_cell'))
+        box.label(text=f"{tr(s, 'selected_hex')}: {rgba_to_hex(s.pixel_render_selected_color)}")
+        box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color', text=tr(s, 'selected_color')); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
         box.separator()
-        box.label(text='Palette Operations')
-        box.operator('paq.extract_palette_from_render', text='Extract Palette from Render'); box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
-        box=l.box(); box.label(text='Output'); box.prop(s,'pixel_render_output_path'); box.prop(s,'pixel_render_save_quantized_lowres'); box.prop(s,'pixel_render_save_upscaled'); box.prop(s,'pixel_render_save_lowres_source')
-        l.label(text='Diagnostics: Ready' if s.pixel_render_active else 'Diagnostics: Pixel Render is inactive.')
+        box.label(text=tr(s, 'palette_operations'))
+        box.operator('paq.extract_palette_from_render', text=tr(s, 'extract_palette_from_render')); box.operator('paq.duplicate_palette_as_custom', text=tr(s, 'duplicate_as_custom')); box.operator('paq.rename_custom_palette', text=tr(s, 'rename_custom')); box.operator('paq.load_gpl_palette', text=tr(s, 'load_gpl')); box.operator('paq.export_gpl_palette', text=tr(s, 'export_gpl')); box.operator('paq.delete_custom_palette', text=tr(s, 'delete_custom'))
+        box=l.box(); box.label(text=tr(s, 'output')); box.prop(s,'pixel_render_output_path'); box.prop(s,'pixel_render_save_quantized_lowres'); box.prop(s,'pixel_render_save_upscaled'); box.prop(s,'pixel_render_save_lowres_source')
+        l.label(text=tr(s, 'diagnostics_ready') if s.pixel_render_active else tr(s, 'diagnostics_inactive'))
  classes=(PAQ_PT_render,)

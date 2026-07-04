@@ -1,5 +1,6 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
+# TODO: Localize report messages.
 from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .utils import hex_to_rgba, luminance
 from .properties import default_reserved_indices

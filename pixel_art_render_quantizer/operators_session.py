@@ -1,5 +1,6 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
+# TODO: Localize report messages.
 from .palettes_builtin import DEFAULT_PALETTE_ID
 from .properties import sync_camera_frame_to_pixel_render, sync_selected_palette_color
 
