@@ -11,6 +11,11 @@ except ModuleNotFoundError:  # allows algorithm tests outside Blender
 SCALE_ITEMS = [(str(v), f"x{v}", "") for v in (1, 2, 3, 4, 5, 6, 8)]
 MODE_ITEMS = [("ALL_IN_ONE", "ALL in ONE", "Single palette for entire render"), ("INDIVIDUAL", "Individual Palette Mode", "Object and background palette assignment")]
 PRESET_ITEMS = [("128x128", "Sprite / Icon", "128 x 128"), ("256x256", "Character Preview", "256 x 256"), ("320x180", "16:9 Small Scene", "320 x 180"), ("426x240", "16:9 Wide Preview", "426 x 240"), ("320x240", "4:3 Retro Scene", "320 x 240"), ("640x360", "Large Pixel Render", "640 x 360")]
+CAMERA_FRAME_SYNC_ITEMS = [
+    ("NONE", "Do Not Sync", "Do not change Blender render resolution"),
+    ("LOWRES", "Sync Pixel Render Size", "Set Blender render resolution to the low-resolution Pixel Render Size"),
+    ("FINAL", "Sync Final Output Size", "Set Blender render resolution to Pixel Render Size multiplied by Scale"),
+]
 
 def _palette_enum(self, context):
     items = [(pid, name, "Built-in palette") for pid, name in [(k, k) for k in BUILTIN_PALETTES]]
@@ -20,10 +25,41 @@ def _palette_enum(self, context):
             items.append((pal.id, pal.name, pal.type))
     return items
 
+def pixel_render_final_size(scene):
+    width = int(scene.pixel_render_width)
+    height = int(scene.pixel_render_height)
+    scale = int(scene.pixel_render_scale)
+    return width * scale, height * scale
+
+
+def sync_camera_frame_to_pixel_render(scene):
+    mode = getattr(scene, "pixel_render_camera_frame_sync_mode", "NONE")
+
+    if mode == "NONE":
+        return
+
+    width = int(scene.pixel_render_width)
+    height = int(scene.pixel_render_height)
+    scale = int(scene.pixel_render_scale)
+
+    if mode == "LOWRES":
+        target_w = width
+        target_h = height
+    elif mode == "FINAL":
+        target_w = width * scale
+        target_h = height * scale
+    else:
+        return
+
+    scene.render.resolution_x = target_w
+    scene.render.resolution_y = target_h
+    scene.render.resolution_percentage = 100
+    scene.render.pixel_aspect_x = 1.0
+    scene.render.pixel_aspect_y = 1.0
+
+
 def _sync_resolution(self, context):
-    if self.pixel_render_sync_blender_resolution:
-        self.render.resolution_x = self.pixel_render_width
-        self.render.resolution_y = self.pixel_render_height
+    sync_camera_frame_to_pixel_render(self)
 
 def _apply_preset(self, context):
     if self.pixel_render_resolution_preset != "CUSTOM":
@@ -147,9 +183,9 @@ if bpy:
         s.pixel_render_resolution_preset = bpy.props.EnumProperty(items=PRESET_ITEMS + [("CUSTOM", "Custom", "")], default="320x180", update=_apply_preset)
         s.pixel_render_width = bpy.props.IntProperty(default=320, min=1, update=_sync_resolution)
         s.pixel_render_height = bpy.props.IntProperty(default=180, min=1, update=_sync_resolution)
-        s.pixel_render_scale = bpy.props.EnumProperty(items=SCALE_ITEMS, default="4")
+        s.pixel_render_scale = bpy.props.EnumProperty(items=SCALE_ITEMS, default="4", update=_sync_resolution)
         s.pixel_render_lock_aspect = bpy.props.BoolProperty(default=True)
-        s.pixel_render_sync_blender_resolution = bpy.props.BoolProperty(default=False)
+        s.pixel_render_camera_frame_sync_mode = bpy.props.EnumProperty(items=CAMERA_FRAME_SYNC_ITEMS, default="FINAL", update=_sync_resolution)
         s.pixel_render_look_palette_id = bpy.props.EnumProperty(items=_palette_enum, update=_load_selected_palette_color)
         s.pixel_render_global_palette_id = bpy.props.EnumProperty(items=_palette_enum)
         s.pixel_render_background_palette_id = bpy.props.EnumProperty(items=_palette_enum)
@@ -182,7 +218,7 @@ if bpy:
         scene_props = (
             'pixel_render_active', 'pixel_render_mode', 'pixel_render_resolution_preset',
             'pixel_render_width', 'pixel_render_height', 'pixel_render_scale',
-            'pixel_render_lock_aspect', 'pixel_render_sync_blender_resolution',
+            'pixel_render_lock_aspect', 'pixel_render_camera_frame_sync_mode',
             'pixel_render_look_palette_id', 'pixel_render_global_palette_id',
             'pixel_render_background_palette_id', 'pixel_render_background_collection_id',
             'pixel_render_gamma', 'pixel_render_exposure', 'pixel_render_contrast',

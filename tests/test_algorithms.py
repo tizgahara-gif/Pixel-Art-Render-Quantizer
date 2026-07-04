@@ -1,5 +1,5 @@
 from pixel_art_render_quantizer.palettes_builtin import BUILTIN_PALETTES
-from pixel_art_render_quantizer.properties import default_reserved_indices
+from pixel_art_render_quantizer.properties import default_reserved_indices, pixel_render_final_size, sync_camera_frame_to_pixel_render
 from pixel_art_render_quantizer.utils import hex_to_rgba, sanitize_palette_name
 from pixel_art_render_quantizer.quantize import select_usable_colors, quantize_pixels
 from pixel_art_render_quantizer.outline import cleanup_strict_mask
@@ -233,3 +233,44 @@ def test_palette_preview_data_reads_custom_palette_flags():
     assert preview['colors'][0]['quantization_enabled'] is False
     assert preview['colors'][0]['use_as_outline'] is True
     assert preview['colors'][1]['hex'] == '#FF0000'
+
+
+def _sync_scene(mode='FINAL', width=320, height=240, scale='4'):
+    render = SimpleNamespace(
+        resolution_x=1920,
+        resolution_y=1080,
+        resolution_percentage=50,
+        pixel_aspect_x=2.0,
+        pixel_aspect_y=1.5,
+    )
+    return SimpleNamespace(
+        pixel_render_camera_frame_sync_mode=mode,
+        pixel_render_width=width,
+        pixel_render_height=height,
+        pixel_render_scale=scale,
+        render=render,
+    )
+
+
+def test_pixel_render_final_size_uses_scale():
+    scene = _sync_scene(width=320, height=180, scale='4')
+    assert pixel_render_final_size(scene) == (1280, 720)
+
+
+def test_sync_camera_frame_final_output_size_and_square_pixels():
+    scene = _sync_scene(mode='FINAL', width=320, height=240, scale='4')
+    sync_camera_frame_to_pixel_render(scene)
+    assert (scene.render.resolution_x, scene.render.resolution_y) == (1280, 960)
+    assert scene.render.resolution_percentage == 100
+    assert (scene.render.pixel_aspect_x, scene.render.pixel_aspect_y) == (1.0, 1.0)
+
+
+def test_sync_camera_frame_lowres_and_none_modes():
+    lowres_scene = _sync_scene(mode='LOWRES', width=320, height=240, scale='4')
+    sync_camera_frame_to_pixel_render(lowres_scene)
+    assert (lowres_scene.render.resolution_x, lowres_scene.render.resolution_y) == (320, 240)
+
+    none_scene = _sync_scene(mode='NONE', width=320, height=240, scale='4')
+    sync_camera_frame_to_pixel_render(none_scene)
+    assert (none_scene.render.resolution_x, none_scene.render.resolution_y) == (1920, 1080)
+    assert (none_scene.render.pixel_aspect_x, none_scene.render.pixel_aspect_y) == (2.0, 1.5)
