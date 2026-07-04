@@ -111,6 +111,15 @@ def export_gpl_from_scene(scene, filepath):
     open(filepath,'w',encoding='utf-8').write(gpl_text_from_scene_palette(scene)); return filepath
 
 if bpy:
+ class PAQ_OT_select_palette_grid_color(bpy.types.Operator):
+    bl_idname='paq.select_palette_grid_color'; bl_label='Select Palette Color'; bl_options={'REGISTER','UNDO'}
+    index:bpy.props.IntProperty(default=0, min=0)
+    def execute(self,context):
+        scene=context.scene
+        scene.pixel_render_selected_color_index=self.index
+        from .properties import sync_selected_palette_color
+        sync_selected_palette_color(scene)
+        return {'FINISHED'}
  class PAQ_OT_duplicate_palette(bpy.types.Operator):
     bl_idname='paq.duplicate_palette_as_custom'; bl_label='Duplicate as Custom'; bl_options={'REGISTER','UNDO'}
     def execute(self,context):
@@ -164,4 +173,4 @@ if bpy:
         try: export_gpl_from_scene(context.scene, self.filepath)
         except Exception as exc: self.report({'ERROR'},f'Failed to export .gpl: {exc}'); return {'CANCELLED'}
         return {'FINISHED'}
- classes=(PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+ classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)

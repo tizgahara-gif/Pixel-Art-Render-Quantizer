@@ -6,15 +6,13 @@ from .properties import default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
 
 
-def palette_preview_data(scene):
-    """Return display-only palette preview data for the selected look palette."""
+def palette_display_entries(scene):
+    """Return display-only entries for the selected look palette grid."""
     palette_id = scene.pixel_render_look_palette_id
     if palette_id in BUILTIN_PALETTES:
         rgba_colors = [hex_to_rgba(hex_value) for hex_value in BUILTIN_PALETTES[palette_id]]
         reserved_indices = set(default_reserved_indices(rgba_colors))
-        return {
-            'name': palette_id,
-            'colors': [
+        return [
                 {
                     'index': index,
                     'hex': hex_value,
@@ -25,14 +23,11 @@ def palette_preview_data(scene):
                     'color_item': None,
                 }
                 for index, hex_value in enumerate(BUILTIN_PALETTES[palette_id])
-            ],
-        }
+            ]
 
     for palette in scene.pixel_render_palettes:
         if palette.id == palette_id:
-            return {
-                'name': palette.name,
-                'colors': [
+            return [
                     {
                         'index': index,
                         'hex': rgba_to_hex(color.color),
@@ -43,11 +38,22 @@ def palette_preview_data(scene):
                         'color_item': color,
                     }
                     for index, color in enumerate(palette.colors)
-                ],
-            }
+                ]
 
-    return {'name': palette_id or 'None', 'colors': []}
+    return []
 
+
+
+def palette_preview_data(scene):
+    """Return display-only palette preview data for the selected look palette."""
+    palette_id = scene.pixel_render_look_palette_id
+    name = palette_id or 'None'
+    if palette_id not in BUILTIN_PALETTES:
+        for palette in scene.pixel_render_palettes:
+            if palette.id == palette_id:
+                name = palette.name
+                break
+    return {'name': name, 'colors': palette_display_entries(scene)}
 
 def draw_palette_color_swatch(row, entry):
     """Draw a read-only color chip when Blender exposes a suitable UI helper."""
@@ -93,9 +99,41 @@ if bpy:
         l.prop(s,'pixel_render_look_palette_id',text='Look Palette'); l.operator('paq.quick_render_check'); l.operator('paq.render_quantize')
         box=l.box(); box.label(text='Output Size'); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f'Final Output Size: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}'); box.prop(s,'pixel_render_sync_blender_resolution')
         box=l.box(); box.label(text='Advanced Look'); box.prop(s,'pixel_render_gamma'); box.prop(s,'pixel_render_alpha_mode'); box.prop(s,'pixel_render_alpha_threshold'); box.prop(s,'pixel_render_dither_mode'); box.prop(s,'pixel_render_dither_strength'); box.prop(s,'pixel_render_outline_enabled', text='Strict Alpha Edge Outline'); box.label(text='v1.0 outline uses alpha edges only.'); box.label(text='Object silhouette/depth outlines are not implemented yet.')
-        box=l.box(); box.label(text='Palette Manager'); box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
+        box=l.box(); box.label(text='Palette Manager')
+        box.label(text='Current Palette')
+        box.prop(s,'pixel_render_look_palette_id',text='Look Palette')
+        palette_type = 'Built-in' if s.pixel_render_look_palette_id in BUILTIN_PALETTES else 'Custom / External'
+        box.label(text=f'Palette Type: {palette_type}')
+        box.separator()
+        box.label(text='Palette Grid')
+        entries = palette_display_entries(s)
+        box.label(text='R: Reserved / X: Disabled / O: Outline')
+        if entries:
+            columns = 4 if len(entries) <= 4 else 8
+            grid = box.grid_flow(row_major=True, columns=columns, even_columns=True, even_rows=True, align=True)
+            for entry in entries:
+                cell = grid.column(align=True)
+                selected = entry['index'] == s.pixel_render_selected_color_index
+                label = f"{entry['index']:02d}"
+                if entry['reserved']:
+                    label += ' R'
+                if not entry['quantization_enabled']:
+                    label += ' X'
+                if entry['use_as_outline']:
+                    label += ' O'
+                op = cell.operator('paq.select_palette_grid_color', text=label, depress=selected)
+                op.index = entry['index']
+                chip = cell.row(align=True)
+                draw_palette_color_swatch(chip, entry)
+                cell.label(text=entry['hex'])
+        else:
+            box.label(text='No colors in the selected palette.', icon='INFO')
+        box.separator()
+        box.label(text='Selected Color Detail')
         box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
-        draw_palette_preview(box, s)
+        box.separator()
+        box.label(text='Palette Operations')
+        box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
         box=l.box(); box.label(text='Output'); box.prop(s,'pixel_render_output_path'); box.prop(s,'pixel_render_save_quantized_lowres'); box.prop(s,'pixel_render_save_upscaled'); box.prop(s,'pixel_render_save_lowres_source')
         l.label(text='Diagnostics: Ready' if s.pixel_render_active else 'Diagnostics: Pixel Render is inactive.')
  classes=(PAQ_PT_render,)

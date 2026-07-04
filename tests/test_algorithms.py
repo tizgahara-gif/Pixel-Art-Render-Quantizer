@@ -201,19 +201,21 @@ def test_apply_selected_palette_reserved_only_preserves_color_value():
 
 
 def test_palette_preview_data_reads_builtin_without_scene_mutation():
-    from pixel_art_render_quantizer.ui_render import palette_preview_data
+    from pixel_art_render_quantizer.ui_render import palette_display_entries, palette_preview_data
 
     scene = SimpleNamespace(pixel_render_look_palette_id='PAQ_ModernCool_08', pixel_render_palettes=FakeCollection())
     preview = palette_preview_data(scene)
+    entries = palette_display_entries(scene)
 
     assert preview['name'] == 'PAQ_ModernCool_08'
     assert [entry['hex'] for entry in preview['colors']] == BUILTIN_PALETTES['PAQ_ModernCool_08']
+    assert [entry['hex'] for entry in entries] == BUILTIN_PALETTES['PAQ_ModernCool_08']
     assert all(entry['quantization_enabled'] for entry in preview['colors'])
     assert len(scene.pixel_render_palettes) == 0
 
 
 def test_palette_preview_data_reads_custom_palette_flags():
-    from pixel_art_render_quantizer.ui_render import palette_preview_data
+    from pixel_art_render_quantizer.ui_render import palette_display_entries, palette_preview_data
 
     pal = SimpleNamespace(id='custom', name='Custom Palette', colors=FakeCollection())
     pal.colors.extend([
@@ -222,9 +224,11 @@ def test_palette_preview_data_reads_custom_palette_flags():
     ])
     scene = SimpleNamespace(pixel_render_look_palette_id='custom', pixel_render_palettes=FakeCollection([pal]))
     preview = palette_preview_data(scene)
+    entries = palette_display_entries(scene)
 
     assert preview['name'] == 'Custom Palette'
     assert preview['colors'][0]['hex'] == '#4080BF'
+    assert entries[0]['hex'] == '#4080BF'
     assert preview['colors'][0]['reserved'] is True
     assert preview['colors'][0]['quantization_enabled'] is False
     assert preview['colors'][0]['use_as_outline'] is True
