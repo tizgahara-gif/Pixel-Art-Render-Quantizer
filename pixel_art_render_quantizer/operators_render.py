@@ -56,7 +56,19 @@ if bpy:
         unique_count=count_unique_rgb(low)
         self.report({'INFO'},f'Palette applied: {s.pixel_render_look_palette_id}, unique RGB colors={unique_count}')
         up,uw,uh=upscale_nearest(low,actual_w,actual_h,int(s.pixel_render_scale))
-        out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
+        image_name = 'Pixel_Render_Check' if not save else 'Pixel_Render_Quantized'
+        out=pixels_to_image(image_name,up,uw,uh)
+        shown = show_image_in_editors(out,context)
+        if not save:
+            if shown:
+                self.report({'INFO'}, 'Quick Render Check completed. Showing Pixel_Render_Check.')
+            else:
+                self.report({'WARNING'}, 'Quick Render Check completed as Pixel_Render_Check, but no Image Editor area is open.')
+        else:
+            if shown:
+                self.report({'INFO'}, 'Render & Quantize completed. Showing Pixel_Render_Quantized.')
+            else:
+                self.report({'INFO'}, 'Render & Quantize completed. Output image: Pixel_Render_Quantized.')
         if save:
             import os
             base=bpy.path.abspath(s.pixel_render_output_path); os.makedirs(base,exist_ok=True)

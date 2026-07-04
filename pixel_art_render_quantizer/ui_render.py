@@ -110,7 +110,30 @@ if bpy:
     bl_label='Pixel Art Render Quantizer'; bl_space_type='PROPERTIES'; bl_region_type='WINDOW'; bl_context='render'
     def draw(self,context):
         s=context.scene
-        l=self.layout; l.prop(s,'pixel_render_mode');
+        l=self.layout
+        status_box = l.box()
+        status_box.label(
+            text='Pixel Render: Active' if s.pixel_render_active else 'Pixel Render: Inactive',
+            icon='CHECKMARK' if s.pixel_render_active else 'CANCEL'
+        )
+
+        if s.pixel_render_active:
+            status_box.label(text=f'Mode: {s.pixel_render_mode}')
+            status_box.label(text=f'Look Palette: {s.pixel_render_look_palette_id}')
+            status_box.label(
+                text=f'Pixel Size: {s.pixel_render_width} x {s.pixel_render_height}  Scale: x{s.pixel_render_scale}'
+            )
+            status_box.label(
+                text=f'Final Output: {s.pixel_render_width * int(s.pixel_render_scale)} x {s.pixel_render_height * int(s.pixel_render_scale)}'
+            )
+
+        row = l.row(align=True)
+        if s.pixel_render_active:
+            row.operator('paq.stop_pixel_render', text='Stop Pixel Render', icon='PAUSE')
+        else:
+            row.operator('paq.start_pixel_render', text='Start Pixel Render', icon='PLAY')
+
+        l.prop(s,'pixel_render_mode');
         if s.pixel_render_mode=='INDIVIDUAL': l.label(text='Individual assignment data is stored, but rendering is not active in v1.0.', icon='ERROR')
         l.prop(s,'pixel_render_look_palette_id',text='Look Palette'); l.operator('paq.quick_render_check'); l.operator('paq.render_quantize')
         box=l.box(); box.label(text='Output Size'); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f'Final Output Size: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}'); box.prop(s,'pixel_render_camera_frame_sync_mode', text='Camera Frame Sync')
@@ -123,8 +146,9 @@ if bpy:
         box.label(text=f'Palette Type: {palette_type}')
         limit_row = box.row(align=True)
         limit_row.label(text=f'Palette Color Limit: {palette_color_limit_display(s)}')
+        box.label(text='Reserved colors are not counted.')
+        box.label(text='Disabled colors are not counted for custom/external palettes.')
         if is_builtin:
-            box.label(text='0 = Use palette default')
             box.operator('paq.set_palette_usable_color_count', text='Change Limit (Duplicate as Custom)')
         else:
             palette = selected_palette(s)
