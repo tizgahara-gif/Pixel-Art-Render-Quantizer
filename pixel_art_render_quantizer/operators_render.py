@@ -3,11 +3,12 @@ except ModuleNotFoundError: bpy=None
 from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .utils import hex_to_rgba, luminance
 from .properties import default_reserved_indices
-from .quantize import quantize_pixels
+from .quantize import quantize_pixels, build_assignment_curve_lut_from_mapping, build_assignment_curve_lut_from_points
 from .alpha import apply_alpha
 from .outline import apply_outline
 from .render_pipeline import render_lowres_to_pixels, upscale_nearest
 from .image_output import pixels_to_image, show_image_in_editors
+from .curve_mapping_store import get_assignment_curve_mapping, assignment_curve_points_from_scene
 
 def palette_for_scene(scene, palette_id):
     if palette_id in BUILTIN_PALETTES:
@@ -27,14 +28,17 @@ def count_unique_rgb(pixels):
 
 def process_pixels(scene, pixels, w, h):
     colors,reserved,usable,enabled=palette_for_scene(scene, scene.pixel_render_look_palette_id)
-    assignment_curve_points = [
-        (0.0, scene.pixel_render_assignment_curve_black),
-        (0.25, scene.pixel_render_assignment_curve_shadow),
-        (0.5, scene.pixel_render_assignment_curve_mid),
-        (0.75, scene.pixel_render_assignment_curve_light),
-        (1.0, scene.pixel_render_assignment_curve_white),
-    ]
-    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,enabled_indices=enabled,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation,assignment_curve_enabled=scene.pixel_render_assignment_curve_enabled,assignment_curve_points=assignment_curve_points,assignment_curve_strength=scene.pixel_render_assignment_curve_strength)
+    assignment_curve_points = assignment_curve_points_from_scene(scene)
+    assignment_curve_lut = None
+    if scene.pixel_render_assignment_curve_enabled:
+        try:
+            mapping = get_assignment_curve_mapping(scene)
+            assignment_curve_lut = build_assignment_curve_lut_from_mapping(mapping, size=256) if mapping else None
+        except Exception:
+            assignment_curve_lut = None
+        if assignment_curve_lut is None:
+            assignment_curve_lut = build_assignment_curve_lut_from_points(assignment_curve_points, size=256)
+    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,enabled_indices=enabled,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation,assignment_curve_enabled=scene.pixel_render_assignment_curve_enabled,assignment_curve_lut=assignment_curve_lut,assignment_curve_points=assignment_curve_points,assignment_curve_strength=scene.pixel_render_assignment_curve_strength)
     q=apply_alpha(q,w,h,scene.pixel_render_alpha_mode,scene.pixel_render_alpha_threshold)
     if scene.pixel_render_outline_enabled:
         oi=reserved[0] if reserved else min(range(len(colors)), key=lambda i:luminance(colors[i])); q=apply_outline(q,w,h,colors[oi])
