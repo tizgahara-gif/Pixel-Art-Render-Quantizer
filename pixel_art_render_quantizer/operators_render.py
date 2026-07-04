@@ -43,14 +43,20 @@ if bpy:
         if img is None:
             self.report({'ERROR'},'Render Result was not created.')
             return {'CANCELLED'}
-        actual_w,actual_h=tuple(img.size[:2]) if hasattr(img,'size') else (requested_w,requested_h)
+        size=tuple(img.size[:2]) if hasattr(img,'size') else (0,0)
+        size_w,size_h=int(size[0]),int(size[1])
         pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
         pixel_count=len(pixels)
+        if size_w > 0 and size_h > 0:
+            actual_w,actual_h=size_w,size_h
+        else:
+            actual_w,actual_h=requested_w,requested_h
+            self.report({'WARNING'},f'Render Result reported invalid size {size_w}x{size_h}. Falling back to requested size {requested_w}x{requested_h}.')
         if actual_w <= 0 or actual_h <= 0:
-            self.report({'ERROR'},'Render Result has invalid size.')
+            self.report({'ERROR'},f'Invalid render size: actual={actual_w}x{actual_h}, requested={requested_w}x{requested_h}, pixels={pixel_count}')
             return {'CANCELLED'}
         if pixel_count != actual_w * actual_h:
-            self.report({'ERROR'},f'Render Result pixel count mismatch: size={actual_w}x{actual_h}, pixels={pixel_count}')
+            self.report({'ERROR'},f'Render Result pixel count mismatch: actual={actual_w}x{actual_h}, requested={requested_w}x{requested_h}, pixels={pixel_count}')
             return {'CANCELLED'}
         if (actual_w,actual_h) != (requested_w,requested_h):
             self.report({'WARNING'},f'Render Result size differs from Pixel Render Size: requested={requested_w}x{requested_h}, actual={actual_w}x{actual_h}. Using actual size.')
