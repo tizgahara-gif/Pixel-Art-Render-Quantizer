@@ -169,6 +169,12 @@ if bpy:
         s.pixel_render_save_lowres_source = bpy.props.BoolProperty(default=False)
         s.pixel_render_save_quantized_lowres = bpy.props.BoolProperty(default=True)
         s.pixel_render_save_upscaled = bpy.props.BoolProperty(default=True)
+        s.pixel_render_builtin_usable_color_count = bpy.props.IntProperty(
+            name="Usable Color Count",
+            default=0,
+            min=0,
+            description="Maximum number of usable colors for the selected built-in palette. 0 means use the palette default.",
+        )
         s.pixel_render_palettes = bpy.props.CollectionProperty(type=PAQ_PaletteItem)
         s.pixel_render_selected_color_index = bpy.props.IntProperty(name="Selected Color Index", default=0, min=0, update=_load_selected_palette_color)
         s.pixel_render_selected_color = bpy.props.FloatVectorProperty(name="Color", subtype="COLOR", size=4, min=0, max=1, default=(0,0,0,1), update=_apply_selected_palette_color)
@@ -191,7 +197,7 @@ if bpy:
             'pixel_render_outline_enabled', 'pixel_render_outline_mode',
             'pixel_render_outline_color_mode', 'pixel_render_output_path',
             'pixel_render_save_lowres_source', 'pixel_render_save_quantized_lowres',
-            'pixel_render_save_upscaled', 'pixel_render_palettes',
+            'pixel_render_save_upscaled', 'pixel_render_builtin_usable_color_count', 'pixel_render_palettes',
             'pixel_render_selected_color_index', 'pixel_render_selected_color',
             'pixel_render_selected_color_reserved',
             'pixel_render_selected_color_quantization_enabled',

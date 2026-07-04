@@ -5,7 +5,7 @@ try:
 except ModuleNotFoundError:
     ImportHelper = ExportHelper = object
 import os
-from .palettes_builtin import BUILTIN_PALETTES
+from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, new_id, sanitize_palette_name
 from .palette_io_gpl import parse_gpl, write_gpl
@@ -33,7 +33,7 @@ def create_custom_from_palette(scene, palette_id):
     reserved=default_reserved_indices(colors)
     for i,c in enumerate(colors):
         pc=pal.colors.add(); pc.color=c; pc.reserved=i in reserved; pc.quantization_enabled=True
-    pal.usable_color_count=max(1,len(colors)-len(reserved)); pal.outline_index=reserved[0] if reserved else 0
+    pal.usable_color_count=builtin_default_usable_count(palette_id, len(colors), len(reserved)) if palette_id in BUILTIN_PALETTES else max(1,len(colors)-len(reserved)); pal.outline_index=reserved[0] if reserved else 0
     return pal
 
 def create_custom_from_builtin(scene, builtin_id):
@@ -150,6 +150,28 @@ if bpy:
         pal=find_scene_palette(context.scene,pid)
         if pal and pal.type!='BUILTIN': pal.name=name; return {'FINISHED'}
         self.report({'ERROR'},'Select a custom palette'); return {'CANCELLED'}
+ class PAQ_OT_set_palette_usable_color_count(bpy.types.Operator):
+    bl_idname='paq.set_palette_usable_color_count'; bl_label='Set Palette Color Limit'; bl_options={'REGISTER','UNDO'}
+    value:bpy.props.IntProperty(name='Palette Color Limit', default=0, min=0)
+    def invoke(self,context,event):
+        scene=context.scene
+        pid=scene.pixel_render_look_palette_id
+        if pid in BUILTIN_PALETTES:
+            colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[pid]]
+            reserved=default_reserved_indices(colors)
+            self.value=builtin_default_usable_count(pid, len(colors), len(reserved))
+        else:
+            pal=find_scene_palette(scene,pid)
+            self.value=pal.usable_color_count if pal else 0
+        return context.window_manager.invoke_props_dialog(self)
+    def execute(self,context):
+        try:
+            pal=ensure_editable_palette(context.scene)
+        except Exception as exc:
+            self.report({'ERROR'},str(exc)); return {'CANCELLED'}
+        max_count=len(pal.colors)
+        pal.usable_color_count=max(0,min(int(self.value),max_count))
+        return {'FINISHED'}
  class PAQ_OT_delete_palette(bpy.types.Operator):
     bl_idname='paq.delete_custom_palette'; bl_label='Delete Custom'; bl_options={'REGISTER','UNDO'}
     def execute(self,context):
@@ -173,4 +195,4 @@ if bpy:
         try: export_gpl_from_scene(context.scene, self.filepath)
         except Exception as exc: self.report({'ERROR'},f'Failed to export .gpl: {exc}'); return {'CANCELLED'}
         return {'FINISHED'}
- classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+ classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
