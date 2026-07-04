@@ -220,6 +220,75 @@ def test_apply_selected_palette_reserved_only_preserves_color_value():
     assert pal.colors[0].reserved is True
 
 
+
+def test_apply_selected_palette_color_preserves_builtin_edit_during_palette_switch(monkeypatch):
+    from pixel_art_render_quantizer import operators_palette
+    from pixel_art_render_quantizer.properties import _apply_selected_palette_color
+
+    pal = SimpleNamespace(id='custom', name='Custom', type='CUSTOM_SCENE', colors=FakeCollection(), outline_index=0, usable_color_count=0)
+    pal.colors.extend([
+        SimpleNamespace(color=(0.0, 0.0, 0.0, 1.0), reserved=False, quantization_enabled=True, use_as_outline=False),
+        SimpleNamespace(color=(0.1, 0.1, 0.1, 1.0), reserved=False, quantization_enabled=True, use_as_outline=False),
+        SimpleNamespace(color=(0.2, 0.2, 0.2, 1.0), reserved=False, quantization_enabled=True, use_as_outline=False),
+        SimpleNamespace(color=(0.3, 0.3, 0.3, 1.0), reserved=False, quantization_enabled=True, use_as_outline=False),
+    ])
+    edited = (1.0, 0.0, 0.0, 1.0)
+    scene = SimpleNamespace(
+        pixel_render_palettes=FakeCollection([pal]),
+        pixel_render_look_palette_id='PAQ_ModernCool_08',
+        pixel_render_selected_color_index=3,
+        pixel_render_selected_color=edited,
+        pixel_render_selected_color_reserved=True,
+        pixel_render_selected_color_quantization_enabled=False,
+        pixel_render_selected_color_use_as_outline=True,
+    )
+
+    def fake_ensure_editable_palette(scene_arg, palette_id=None):
+        scene_arg.pixel_render_look_palette_id = pal.id
+        scene_arg.pixel_render_selected_color = (0.3, 0.3, 0.3, 1.0)
+        scene_arg.pixel_render_selected_color_reserved = False
+        scene_arg.pixel_render_selected_color_quantization_enabled = True
+        scene_arg.pixel_render_selected_color_use_as_outline = False
+        return pal
+
+    monkeypatch.setattr(operators_palette, 'ensure_editable_palette', fake_ensure_editable_palette)
+
+    _apply_selected_palette_color(scene, None)
+
+    assert scene.pixel_render_selected_color_index == 3
+    assert pal.colors[3].color == edited
+    assert pal.colors[3].reserved is True
+    assert pal.colors[3].quantization_enabled is False
+    assert pal.colors[3].use_as_outline is True
+    assert scene.pixel_render_selected_color == edited
+    assert scene.pixel_render_selected_color_reserved is True
+    assert scene.pixel_render_selected_color_quantization_enabled is False
+    assert scene.pixel_render_selected_color_use_as_outline is True
+
+
+def test_apply_selected_palette_color_tags_context_areas_for_redraw():
+    from pixel_art_render_quantizer.properties import _apply_selected_palette_color
+
+    pal = SimpleNamespace(id='custom', name='Custom', type='CUSTOM_SCENE', colors=FakeCollection(), outline_index=0, usable_color_count=0)
+    pal.colors.append(SimpleNamespace(color=(0.0, 0.0, 0.0, 1.0), reserved=False, quantization_enabled=True, use_as_outline=False))
+    scene = SimpleNamespace(
+        pixel_render_palettes=FakeCollection([pal]),
+        pixel_render_look_palette_id='custom',
+        pixel_render_selected_color_index=0,
+        pixel_render_selected_color=(0.0, 1.0, 0.0, 1.0),
+        pixel_render_selected_color_reserved=False,
+        pixel_render_selected_color_quantization_enabled=True,
+        pixel_render_selected_color_use_as_outline=False,
+    )
+    area = SimpleNamespace(redraws=0)
+    area.tag_redraw = lambda: setattr(area, 'redraws', area.redraws + 1)
+    context = SimpleNamespace(screen=SimpleNamespace(areas=[area]))
+
+    _apply_selected_palette_color(scene, context)
+
+    assert pal.colors[0].color == (0.0, 1.0, 0.0, 1.0)
+    assert area.redraws == 1
+
 def test_palette_preview_data_reads_builtin_without_scene_mutation():
     from pixel_art_render_quantizer.ui_render import palette_display_entries, palette_preview_data
 

@@ -158,6 +158,7 @@ if bpy:
         box.separator()
         box.label(text='Palette Grid')
         entries = palette_display_entries(s)
+        box.label(text='Click a cell to select it. Edit its color below.')
         box.label(text='R: Reserved / X: Disabled / O: Outline')
         if entries:
             columns = 4 if len(entries) <= 4 else 8
@@ -180,7 +181,8 @@ if bpy:
             box.label(text='No colors in the selected palette.', icon='INFO')
         box.separator()
         box.label(text='Selected Color Detail')
-        box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
+        box.label(text='Edit the selected palette cell here.')
+        box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color', text='Selected Color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
         box.separator()
         box.label(text='Palette Operations')
         box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
