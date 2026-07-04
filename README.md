@@ -30,7 +30,23 @@ Render & Quantize writes the displayed result to `Pixel_Render_Quantized` and sa
 
 ## Palette UI and Color Limits
 
-The Palette Grid shows only color numbers and state symbols inside the grid cells. It does not show HEX color codes inside swatches.
+Palette Grid uses color chips as the visual palette cells.
+
+The chip color is the actual palette color.  
+Click a chip to select it, then edit the selected color in Selected Color Detail.
+
+The selected state is shown with a marker such as ▶.  
+The add-on does not use Blender button background color as palette color.
+
+Palette Gridでは、色チップをパレットセルとして表示します。
+
+色チップの色が実際のパレット色です。  
+色チップをクリックして選択し、Selected Color Detailで色を編集します。
+
+選択中セルは ▶ などの記号で表示されます。  
+Blenderのボタン背景色はパレット色として使用しません。
+
+The Palette Grid shows color numbers and state symbols inside the grid cells. It does not show HEX color codes inside swatches.
 
 State symbols:
 

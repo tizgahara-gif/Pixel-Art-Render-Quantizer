@@ -14,7 +14,7 @@ except ModuleNotFoundError: bpy=None
 if bpy:
     from bpy.app.handlers import persistent
     from .properties import register_properties, unregister_properties
-    from . import operators_session, operators_render, operators_palette, operators_assignment, ui_compositor, ui_render, ui_viewport
+    from . import operators_session, operators_render, operators_palette, operators_assignment, ui_compositor, ui_render, ui_viewport, palette_preview_icons
     MODULE_CLASSES = (operators_session.classes + operators_render.classes + operators_palette.classes + operators_assignment.classes + ui_compositor.classes + ui_render.classes + ui_viewport.classes)
     @persistent
     def _paq_load_post(_dummy):
@@ -26,6 +26,7 @@ if bpy:
     def unregister():
         if _paq_load_post in bpy.app.handlers.load_post: bpy.app.handlers.load_post.remove(_paq_load_post)
         for cls in reversed(MODULE_CLASSES): bpy.utils.unregister_class(cls)
+        palette_preview_icons.unregister()
         unregister_properties()
 else:
     def register(): pass
