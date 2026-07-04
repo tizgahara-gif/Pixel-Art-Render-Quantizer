@@ -1,7 +1,7 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
 
-from .palettes_builtin import BUILTIN_PALETTES
+from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
 
@@ -80,13 +80,29 @@ def draw_palette_preview(box, scene):
         row = box.row(align=True)
         row.label(text=f"{entry['index']:02d}")
         draw_palette_color_swatch(row, entry)
-        row.label(text=entry['hex'])
         if entry['reserved']:
             row.label(text='Reserved')
         if not entry['quantization_enabled']:
             row.label(text='Disabled')
         if entry['use_as_outline']:
             row.label(text='Outline')
+
+
+def selected_palette(scene):
+    palette_id = scene.pixel_render_look_palette_id
+    for palette in scene.pixel_render_palettes:
+        if palette.id == palette_id:
+            return palette
+    return None
+
+def palette_color_limit_display(scene):
+    palette_id = scene.pixel_render_look_palette_id
+    if palette_id in BUILTIN_PALETTES:
+        colors = [hex_to_rgba(hex_value) for hex_value in BUILTIN_PALETTES[palette_id]]
+        reserved = default_reserved_indices(colors)
+        return builtin_default_usable_count(palette_id, len(colors), len(reserved))
+    palette = selected_palette(scene)
+    return palette.usable_color_count if palette else 0
 
 
 if bpy:
@@ -102,8 +118,19 @@ if bpy:
         box=l.box(); box.label(text='Palette Manager')
         box.label(text='Current Palette')
         box.prop(s,'pixel_render_look_palette_id',text='Look Palette')
-        palette_type = 'Built-in' if s.pixel_render_look_palette_id in BUILTIN_PALETTES else 'Custom / External'
+        is_builtin = s.pixel_render_look_palette_id in BUILTIN_PALETTES
+        palette_type = 'Built-in' if is_builtin else 'Custom / External'
         box.label(text=f'Palette Type: {palette_type}')
+        limit_row = box.row(align=True)
+        limit_row.label(text=f'Palette Color Limit: {palette_color_limit_display(s)}')
+        if is_builtin:
+            box.label(text='0 = Use palette default')
+            box.operator('paq.set_palette_usable_color_count', text='Change Limit (Duplicate as Custom)')
+        else:
+            palette = selected_palette(s)
+            if palette:
+                box.prop(palette, 'usable_color_count', text='Palette Color Limit')
+                box.label(text='0 = No limit')
         box.separator()
         box.label(text='Palette Grid')
         entries = palette_display_entries(s)
@@ -125,7 +152,6 @@ if bpy:
                 op.index = entry['index']
                 chip = cell.row(align=True)
                 draw_palette_color_swatch(chip, entry)
-                cell.label(text=entry['hex'])
         else:
             box.label(text='No colors in the selected palette.', icon='INFO')
         box.separator()

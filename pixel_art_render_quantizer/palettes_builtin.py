@@ -16,4 +16,32 @@ BUILTIN_PALETTES = {
     "PAQ_FutureColor_32": ["#03000A", "#070014", "#0C0520", "#120A2A", "#1A0D3A", "#23104D", "#2A1768", "#2931A8", "#173EC2", "#0057D8", "#006BE8", "#007CFF", "#0094FF", "#00A6FF", "#00BFFF", "#00D7FF", "#00F0B5", "#34F58A", "#7DFF6A", "#B8FF58", "#E9FF5A", "#FFF06A", "#FFB000", "#FF8A00", "#FF6A3D", "#FF4A6A", "#FF2BD6", "#C927FF", "#8B5CFF", "#B9A8FF", "#E7E0FF", "#FFFFFF"],
 }
 
+BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS = {
+    "PAQ_RetroWarm_04": 4,
+    "PAQ_ModernCool_04": 4,
+    "PAQ_FutureColor_04": 4,
+    "PAQ_RetroWarm_08": 8,
+    "PAQ_ModernCool_08": 8,
+    "PAQ_FutureColor_08": 8,
+    "PAQ_RetroWarm_16": 16,
+    "PAQ_ModernCool_16": 16,
+    "PAQ_FutureColor_16": 16,
+    "PAQ_RetroWarm_32": 32,
+    "PAQ_ModernCool_32": 32,
+    "PAQ_FutureColor_32": 32,
+}
+
+def builtin_default_usable_count(palette_id, color_count=None, reserved_count=0):
+    """Return the default color limit for a built-in palette.
+
+    The configured value is the user's desired upper bound. Callers that know
+    the palette size can pass it in to clamp the value to a safe range.
+    """
+    value = int(BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS.get(palette_id, 0) or 0)
+    if color_count is None:
+        return max(1, value) if value else 0
+    if value <= 0:
+        value = int(color_count) - int(reserved_count)
+    return max(1, min(int(value), int(color_count)))
+
 DEFAULT_PALETTE_ID = "PAQ_ModernCool_32"

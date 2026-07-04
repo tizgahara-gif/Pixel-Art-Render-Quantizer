@@ -14,6 +14,26 @@ def test_builtin_count_and_default_reservation():
         assert len(reserved) == (0 if len(hexes) == 4 else 1)
 
 
+
+def test_builtin_default_usable_counts_match_palette_sizes():
+    assert set(BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS) == set(BUILTIN_PALETTES)
+    for palette_id, hexes in BUILTIN_PALETTES.items():
+        assert builtin_default_usable_count(palette_id, len(hexes), 1) == len(hexes)
+
+
+def test_palette_for_scene_uses_builtin_default_usable_count():
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
+    colors, reserved, usable, enabled = palette_for_scene(scene, 'PAQ_ModernCool_32')
+    assert len(colors) == 32
+    assert usable == 32
+    assert enabled == list(range(32))
+
+
+def test_create_custom_from_builtin_copies_default_usable_count():
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
+    pal = create_custom_from_palette(scene, 'PAQ_ModernCool_32')
+    assert pal.usable_color_count == 32
+
 def test_reserved_color_excluded_and_usable_reduced():
     colors = [hex_to_rgba(h) for h in BUILTIN_PALETTES['PAQ_ModernCool_08']]
     usable = select_usable_colors(colors, [0], 3)
