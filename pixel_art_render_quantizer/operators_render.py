@@ -1,0 +1,51 @@
+try: import bpy
+except ModuleNotFoundError: bpy=None
+from .palettes_builtin import BUILTIN_PALETTES
+from .utils import hex_to_rgba, luminance
+from .properties import default_reserved_indices
+from .quantize import quantize_pixels
+from .alpha import apply_alpha
+from .outline import apply_outline
+from .render_pipeline import temporary_render_resolution, upscale_nearest
+from .image_output import pixels_to_image, show_image_in_editors
+
+def palette_for_scene(scene, palette_id):
+    if palette_id in BUILTIN_PALETTES:
+        colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]; return colors, default_reserved_indices(colors), max(1,len(colors)-len(default_reserved_indices(colors)))
+    for p in scene.pixel_render_palettes:
+        if p.id==palette_id:
+            return [c.color[:] for c in p.colors], [i for i,c in enumerate(p.colors) if c.reserved], p.usable_color_count
+    raise ValueError('No valid palette selected')
+
+def process_pixels(scene, pixels, w, h):
+    colors,reserved,usable=palette_for_scene(scene, scene.pixel_render_look_palette_id)
+    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation)
+    q=apply_alpha(q,w,h,scene.pixel_render_alpha_mode,scene.pixel_render_alpha_threshold)
+    if scene.pixel_render_outline_enabled:
+        oi=reserved[0] if reserved else min(range(len(colors)), key=lambda i:luminance(colors[i])); q=apply_outline(q,w,h,colors[oi])
+    return q
+if bpy:
+ class _RenderBase:
+    def _run(self,context,save=False):
+        s=context.scene
+        if not s.pixel_render_active: self.report({'ERROR'},'Pixel Render is inactive'); return {'CANCELLED'}
+        if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
+        w,h=s.pixel_render_width,s.pixel_render_height
+        with temporary_render_resolution(s,w,h): bpy.ops.render.render(write_still=False)
+        img=bpy.data.images['Render Result']; pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
+        low=process_pixels(s,pixels,w,h); up,uw,uh=upscale_nearest(low,w,h,int(s.pixel_render_scale))
+        out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
+        if save:
+            import os
+            base=bpy.path.abspath(s.pixel_render_output_path); os.makedirs(base,exist_ok=True)
+            if s.pixel_render_save_upscaled: out.filepath_raw=os.path.join(base,'pixel_render_upscaled.png'); out.file_format='PNG'; out.save()
+            if s.pixel_render_save_quantized_lowres:
+                lowimg=pixels_to_image('Pixel_Render_Lowres_Quantized',low,w,h); lowimg.filepath_raw=os.path.join(base,'pixel_render_lowres_quantized.png'); lowimg.file_format='PNG'; lowimg.save()
+        return {'FINISHED'}
+ class PAQ_OT_quick_render_check(bpy.types.Operator,_RenderBase):
+    bl_idname='paq.quick_render_check'; bl_label='Quick Render Check'; bl_options={'REGISTER'}
+    def execute(self,context): return self._run(context,False)
+ class PAQ_OT_render_quantize(bpy.types.Operator,_RenderBase):
+    bl_idname='paq.render_quantize'; bl_label='Render & Quantize'; bl_options={'REGISTER'}
+    def execute(self,context): return self._run(context,True)
+ classes=(PAQ_OT_quick_render_check,PAQ_OT_render_quantize)
