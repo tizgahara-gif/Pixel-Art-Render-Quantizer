@@ -17,6 +17,11 @@ def palette_for_scene(scene, palette_id):
             return [c.color[:] for c in p.colors], [i for i,c in enumerate(p.colors) if c.reserved], p.usable_color_count
     raise ValueError('No valid palette selected')
 
+def individual_mode_error(scene):
+    if getattr(scene, 'pixel_render_mode', 'ALL_IN_ONE') == 'INDIVIDUAL':
+        return 'Individual Palette Mode rendering is not implemented in v1.0. Switch to ALL in ONE for render output.'
+    return None
+
 def process_pixels(scene, pixels, w, h):
     colors,reserved,usable=palette_for_scene(scene, scene.pixel_render_look_palette_id)
     q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation)
@@ -29,6 +34,8 @@ if bpy:
     def _run(self,context,save=False):
         s=context.scene
         if not s.pixel_render_active: self.report({'ERROR'},'Pixel Render is inactive'); return {'CANCELLED'}
+        mode_error=individual_mode_error(s)
+        if mode_error: self.report({'ERROR'},mode_error); return {'CANCELLED'}
         if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
         w,h=s.pixel_render_width,s.pixel_render_height
         with temporary_render_resolution(s,w,h): bpy.ops.render.render(write_still=False)
