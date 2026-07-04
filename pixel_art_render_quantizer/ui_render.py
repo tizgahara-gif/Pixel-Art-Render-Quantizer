@@ -6,6 +6,7 @@ from .properties import default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
 from .curve_mapping_store import get_assignment_curve_owner
 from .i18n import tr
+from .palette_preview_icons import get_color_icon_value
 
 
 def palette_display_entries(scene):
@@ -58,13 +59,7 @@ def palette_preview_data(scene):
     return {'name': name, 'colors': palette_display_entries(scene)}
 
 def draw_palette_color_swatch(row, entry):
-    """Draw a read-only color chip when Blender exposes a suitable UI helper."""
-    color_item = entry.get('color_item')
-    if color_item is not None:
-        swatch = row.row(align=True)
-        swatch.enabled = False
-        swatch.prop(color_item, 'color', text='')
-        return
+    """Draw a non-editable color chip without opening Blender's color picker."""
     try:
         row.template_node_socket(color=entry['rgba'])
     except Exception:
@@ -189,12 +184,19 @@ if bpy:
                     label += ' X'
                 if entry['use_as_outline']:
                     label += ' O'
-                chip = cell.row(align=True)
-                draw_palette_color_swatch(chip, entry)
                 display_label = label
                 if selected:
                     display_label = f'▶ {display_label}'
-                op = cell.operator('paq.select_palette_grid_color', text=display_label)
+                icon_value = get_color_icon_value(
+                    s.pixel_render_look_palette_id,
+                    entry['index'],
+                    entry['rgba'],
+                )
+                op = cell.operator(
+                    'paq.select_palette_grid_color',
+                    text=display_label,
+                    icon_value=icon_value,
+                )
                 op.index = entry['index']
         else:
             box.label(text=tr(s, 'no_colors'), icon='INFO')
