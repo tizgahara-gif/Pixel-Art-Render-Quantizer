@@ -138,23 +138,56 @@ def sync_selected_palette_color(scene):
 def _load_selected_palette_color(self, context):
     sync_selected_palette_color(self)
 
+def tag_redraw_all_areas(context):
+    screen = getattr(context, "screen", None)
+    if not screen:
+        return
+    for area in screen.areas:
+        area.tag_redraw()
+
 def _apply_selected_palette_color(self, context):
     global _palette_edit_syncing
     if _palette_edit_syncing:
         return
     from .operators_palette import ensure_editable_palette, clamp_selected_color_index, set_outline_color
+
+    # Store the UI edit values before ensure_editable_palette() can switch a
+    # built-in palette to a custom palette. That switch updates the palette id
+    # and may run sync_selected_palette_color(), which would otherwise restore
+    # the old palette entry over the user's just-edited values.
+    edited_color = tuple(self.pixel_render_selected_color)
+    edited_reserved = bool(self.pixel_render_selected_color_reserved)
+    edited_quantization_enabled = bool(self.pixel_render_selected_color_quantization_enabled)
+    edited_use_as_outline = bool(self.pixel_render_selected_color_use_as_outline)
+
     try:
+        _palette_edit_syncing = True
         pal = ensure_editable_palette(self)
         idx = clamp_selected_color_index(self, pal)
     except Exception:
         return
+    finally:
+        _palette_edit_syncing = False
+
     if len(pal.colors) <= 0:
         return
+
     color = pal.colors[idx]
-    color.color = self.pixel_render_selected_color
-    color.reserved = self.pixel_render_selected_color_reserved
-    color.quantization_enabled = self.pixel_render_selected_color_quantization_enabled
-    set_outline_color(pal, idx, self.pixel_render_selected_color_use_as_outline)
+    color.color = edited_color
+    color.reserved = edited_reserved
+    color.quantization_enabled = edited_quantization_enabled
+    set_outline_color(pal, idx, edited_use_as_outline)
+
+    _palette_edit_syncing = True
+    try:
+        self.pixel_render_selected_color = edited_color
+        self.pixel_render_selected_color_reserved = edited_reserved
+        self.pixel_render_selected_color_quantization_enabled = edited_quantization_enabled
+        self.pixel_render_selected_color_use_as_outline = edited_use_as_outline
+    finally:
+        _palette_edit_syncing = False
+
+    tag_redraw_all_areas(context)
 
 if bpy:
     class PAQ_PaletteColor(bpy.types.PropertyGroup):
