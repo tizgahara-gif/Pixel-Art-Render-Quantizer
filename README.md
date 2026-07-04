@@ -74,9 +74,18 @@ If the render contains fewer usable colors than requested, the created palette m
 
 ## Palette Assignment Curve
 
-**Palette Assignment Curve** remaps the rendered pixel luminance before nearest palette color matching. It does not edit or regenerate palette colors; it only changes which existing palette color each processed pixel is likely to be assigned to.
+**Palette Assignment Curve** uses an interactive curve editor.
+The curve remaps rendered pixel luminance before nearest palette color matching.
 
-Enable **Palette Assignment Curve** in **Advanced Look** to adjust the five stable Value / Luminance points: **Black**, **Shadow**, **Mid**, **Light**, and **White**. Use **Curve Strength** to blend between the original luminance and the curve result, and **Reset Curve** to restore the identity curve.
+It does not edit palette colors.
+It changes which palette color each rendered pixel is likely to match.
+
+Enable **Palette Assignment Curve** in **Advanced Look**, then drag the curve handles to remap luminance before palette matching. Use **Curve Strength** to blend between the original luminance and the curve result, and **Reset Curve** to restore the identity curve. The legacy **Black**, **Shadow**, **Mid**, **Light**, and **White** values remain available internally for older files and numeric fallback.
+
+Palette Assignment Curveは、ハンドル操作できるカーブエディタで調整します。
+
+このカーブはパレット色そのものを変更するものではありません。
+レンダー画像の各ピクセルが、どのパレット色へ割り当てられるかを調整します。
 
 Examples:
 

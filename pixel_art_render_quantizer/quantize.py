@@ -72,6 +72,59 @@ def evaluate_assignment_curve(value, points):
     return x
 
 
+def build_assignment_curve_lut_from_points(points, size=256):
+    """Build a luminance remap LUT from numeric assignment curve points."""
+    last = max(1, int(size) - 1)
+    return [evaluate_assignment_curve(i / last, points) for i in range(int(size))]
+
+
+def build_assignment_curve_lut_from_mapping(mapping, size=256):
+    """Build a luminance remap LUT from a Blender CurveMapping-like object."""
+    curves = getattr(mapping, "curves", None)
+    if not curves:
+        raise ValueError("CurveMapping has no curves")
+    curve = curves[3] if len(curves) > 3 else curves[0]
+    if hasattr(mapping, "update"):
+        mapping.update()
+    last = max(1, int(size) - 1)
+    lut = []
+    for i in range(int(size)):
+        x = i / last
+        if hasattr(mapping, "evaluate"):
+            value = mapping.evaluate(curve, x)
+        else:
+            value = evaluate_assignment_curve(x, [(p.location[0], p.location[1]) for p in curve.points])
+        lut.append(clamp01(value))
+    return lut
+
+
+def apply_assignment_curve_lut_to_pixel(pixel, lut, strength=1.0):
+    r, g, b, a = pixel
+
+    r = clamp01(r)
+    g = clamp01(g)
+    b = clamp01(b)
+
+    lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    index = max(0, min(len(lut) - 1, round(lum * (len(lut) - 1))))
+    mapped_lum = clamp01(lut[index])
+
+    strength = clamp01(strength)
+    target_lum = lerp(lum, mapped_lum, strength)
+
+    if lum <= 1e-6:
+        rr = clamp01(target_lum)
+        gg = clamp01(target_lum)
+        bb = clamp01(target_lum)
+    else:
+        scale = target_lum / lum
+        rr = clamp01(r * scale)
+        gg = clamp01(g * scale)
+        bb = clamp01(b * scale)
+
+    return (rr, gg, bb, a)
+
+
 def apply_assignment_curve_to_pixel(pixel, curve_points, strength=1.0):
     """
     Remap pixel luminance and scale RGB around that luminance.
@@ -107,7 +160,7 @@ def nearest_color(pixel, palette):
     r, g, b = pixel[:3]
     return min(palette, key=lambda c: (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2)
 
-def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, enabled_indices=None, assignment_curve_enabled=False, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
+def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, enabled_indices=None, assignment_curve_enabled=False, assignment_curve_lut=None, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
     usable = select_usable_colors(palette_colors, reserved_indices, usable_color_count, enabled_indices)
     if not usable:
         raise ValueError("Palette has no active quantization colors")
@@ -116,7 +169,9 @@ def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), 
     for y in range(height):
         for x in range(width):
             p = apply_look(pixels[y*width+x], **look)
-            if assignment_curve_enabled and assignment_curve_points:
+            if assignment_curve_enabled and assignment_curve_lut:
+                p = apply_assignment_curve_lut_to_pixel(p, assignment_curve_lut, assignment_curve_strength)
+            elif assignment_curve_enabled and assignment_curve_points:
                 p = apply_assignment_curve_to_pixel(p, assignment_curve_points, assignment_curve_strength)
             if dither_mode == "BAYER4" and dither_strength:
                 off = bayer4_offset(x, y) * dither_strength

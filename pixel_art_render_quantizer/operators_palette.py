@@ -11,6 +11,7 @@ from .utils import hex_to_rgba, new_id, sanitize_palette_name
 from .palette_io_gpl import parse_gpl, write_gpl
 from .palette_extract import extract_palette_median_cut
 from .render_pipeline import render_standard_to_pixels
+from .curve_mapping_store import reset_assignment_curve_mapping
 
 def _unique_palette_name(scene, base, exclude=None):
     base=sanitize_palette_name(base) or 'Palette_Custom'
@@ -290,5 +291,8 @@ if bpy:
         s.pixel_render_assignment_curve_mid=0.5
         s.pixel_render_assignment_curve_light=0.75
         s.pixel_render_assignment_curve_white=1.0
+        reset_assignment_curve_mapping(s)
+        for area in context.screen.areas:
+            area.tag_redraw()
         return {'FINISHED'}
  classes=(PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)

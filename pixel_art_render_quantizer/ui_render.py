@@ -4,6 +4,7 @@ except ModuleNotFoundError: bpy=None
 from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
+from .curve_mapping_store import get_assignment_curve_owner
 
 
 def palette_display_entries(scene):
@@ -139,7 +140,16 @@ if bpy:
         box=l.box(); box.label(text='Output Size'); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f'Final Output Size: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}'); box.prop(s,'pixel_render_camera_frame_sync_mode', text='Camera Frame Sync')
         box=l.box(); box.label(text='Advanced Look'); box.prop(s,'pixel_render_gamma'); box.prop(s,'pixel_render_alpha_mode'); box.prop(s,'pixel_render_alpha_threshold'); box.prop(s,'pixel_render_dither_mode'); box.prop(s,'pixel_render_dither_strength'); box.prop(s,'pixel_render_outline_enabled', text='Strict Alpha Edge Outline'); box.label(text='v1.0 outline uses alpha edges only.'); box.label(text='Object silhouette/depth outlines are not implemented yet.'); box.separator(); box.label(text='Palette Assignment Curve'); box.prop(s,'pixel_render_assignment_curve_enabled', text='Enable Assignment Curve');
         if s.pixel_render_assignment_curve_enabled:
-            box.prop(s,'pixel_render_assignment_curve_strength'); box.label(text='Curve Points'); box.prop(s,'pixel_render_assignment_curve_black'); box.prop(s,'pixel_render_assignment_curve_shadow'); box.prop(s,'pixel_render_assignment_curve_mid'); box.prop(s,'pixel_render_assignment_curve_light'); box.prop(s,'pixel_render_assignment_curve_white'); box.operator('paq.reset_assignment_curve', text='Reset Curve'); box.label(text='Remaps luminance before nearest palette color matching.')
+            box.prop(s,'pixel_render_assignment_curve_strength'); box.label(text='Drag the curve handles to remap luminance before palette matching.');
+            curve_owner = get_assignment_curve_owner(s)
+            if curve_owner is not None and hasattr(box, 'template_curve_mapping'):
+                box.template_curve_mapping(curve_owner, 'mapping', type='NONE')
+            else:
+                box.label(text='Interactive curve editor is not available in this Blender version.')
+                box.label(text='Using numeric fallback.')
+                box.label(text='Advanced Numeric Fallback')
+                box.prop(s,'pixel_render_assignment_curve_black'); box.prop(s,'pixel_render_assignment_curve_shadow'); box.prop(s,'pixel_render_assignment_curve_mid'); box.prop(s,'pixel_render_assignment_curve_light'); box.prop(s,'pixel_render_assignment_curve_white')
+            box.operator('paq.reset_assignment_curve', text='Reset Curve')
         box=l.box(); box.label(text='Palette Manager')
         box.label(text='Current Palette')
         box.prop(s,'pixel_render_look_palette_id',text='Look Palette')
