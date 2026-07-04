@@ -73,7 +73,6 @@ When enabled, the Camera View frame matches the final Pixel Render output aspect
 - Silhouette Outline is not implemented.
 - Refraction handling is not implemented.
 - Aseprite file loading is not implemented.
-- Automatic palette extraction from images is not implemented.
 
 ## Notes
 

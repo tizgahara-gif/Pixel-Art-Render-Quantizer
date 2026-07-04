@@ -187,7 +187,7 @@ if bpy:
         box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color', text='Selected Color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
         box.separator()
         box.label(text='Palette Operations')
-        box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
+        box.operator('paq.extract_palette_from_render', text='Extract Palette from Render'); box.operator('paq.duplicate_palette_as_custom'); box.operator('paq.rename_custom_palette'); box.operator('paq.load_gpl_palette'); box.operator('paq.export_gpl_palette'); box.operator('paq.delete_custom_palette')
         box=l.box(); box.label(text='Output'); box.prop(s,'pixel_render_output_path'); box.prop(s,'pixel_render_save_quantized_lowres'); box.prop(s,'pixel_render_save_upscaled'); box.prop(s,'pixel_render_save_lowres_source')
         l.label(text='Diagnostics: Ready' if s.pixel_render_active else 'Diagnostics: Pixel Render is inactive.')
  classes=(PAQ_PT_render,)
