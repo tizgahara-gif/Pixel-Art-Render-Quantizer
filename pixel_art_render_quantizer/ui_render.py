@@ -161,6 +161,7 @@ if bpy:
         box.label(text='Palette Grid')
         entries = palette_display_entries(s)
         box.label(text='Click a cell to select it. Edit its color below.')
+        box.label(text='Color chip shows palette color. ▶ marks the selected cell.')
         box.label(text='R: Reserved / X: Disabled / O: Outline')
         if entries:
             columns = 4 if len(entries) <= 4 else 8
@@ -175,15 +176,19 @@ if bpy:
                     label += ' X'
                 if entry['use_as_outline']:
                     label += ' O'
-                op = cell.operator('paq.select_palette_grid_color', text=label, depress=selected)
-                op.index = entry['index']
                 chip = cell.row(align=True)
                 draw_palette_color_swatch(chip, entry)
+                display_label = label
+                if selected:
+                    display_label = f'▶ {display_label}'
+                op = cell.operator('paq.select_palette_grid_color', text=display_label)
+                op.index = entry['index']
         else:
             box.label(text='No colors in the selected palette.', icon='INFO')
         box.separator()
         box.label(text='Selected Color Detail')
         box.label(text='Edit the selected palette cell here.')
+        box.label(text=f'Selected HEX: {rgba_to_hex(s.pixel_render_selected_color)}')
         box.prop(s,'pixel_render_selected_color_index'); box.prop(s,'pixel_render_selected_color', text='Selected Color'); box.prop(s,'pixel_render_selected_color_reserved'); box.prop(s,'pixel_render_selected_color_quantization_enabled'); box.prop(s,'pixel_render_selected_color_use_as_outline')
         box.separator()
         box.label(text='Palette Operations')
