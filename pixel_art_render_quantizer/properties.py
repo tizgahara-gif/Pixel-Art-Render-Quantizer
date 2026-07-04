@@ -79,8 +79,8 @@ if bpy:
         s.pixel_render_alpha_threshold = bpy.props.FloatProperty(default=0.5, min=0, max=1)
         s.pixel_render_dither_mode = bpy.props.EnumProperty(items=[("NONE","None",""),("BAYER4","Bayer 4x4","")], default="NONE")
         s.pixel_render_dither_strength = bpy.props.FloatProperty(default=0.0, min=0, max=1)
-        s.pixel_render_outline_enabled = bpy.props.BoolProperty(default=False)
-        s.pixel_render_outline_mode = bpy.props.EnumProperty(items=[("STRICT","Strict Pixel Outline","")], default="STRICT")
+        s.pixel_render_outline_enabled = bpy.props.BoolProperty(name="Strict Alpha Edge Outline", description="v1.0 outline uses alpha edges only; object silhouette/depth outlines are not implemented yet", default=False)
+        s.pixel_render_outline_mode = bpy.props.EnumProperty(items=[("STRICT","Strict Alpha Edge Outline","")], default="STRICT")
         s.pixel_render_outline_color_mode = bpy.props.EnumProperty(items=[("RESERVED_DARKEST","Use Reserved Darkest Color","")], default="RESERVED_DARKEST")
         s.pixel_render_output_path = bpy.props.StringProperty(subtype="DIR_PATH", default="")
         s.pixel_render_save_lowres_source = bpy.props.BoolProperty(default=False)
@@ -91,5 +91,28 @@ if bpy:
         bpy.types.Object.pixel_render_palette_id = bpy.props.StringProperty(default="")
 
     def unregister_properties():
+        scene_props = (
+            'pixel_render_active', 'pixel_render_mode', 'pixel_render_resolution_preset',
+            'pixel_render_width', 'pixel_render_height', 'pixel_render_scale',
+            'pixel_render_lock_aspect', 'pixel_render_sync_blender_resolution',
+            'pixel_render_look_palette_id', 'pixel_render_global_palette_id',
+            'pixel_render_background_palette_id', 'pixel_render_background_collection_id',
+            'pixel_render_gamma', 'pixel_render_exposure', 'pixel_render_contrast',
+            'pixel_render_saturation', 'pixel_render_alpha_mode', 'pixel_render_alpha_threshold',
+            'pixel_render_dither_mode', 'pixel_render_dither_strength',
+            'pixel_render_outline_enabled', 'pixel_render_outline_mode',
+            'pixel_render_outline_color_mode', 'pixel_render_output_path',
+            'pixel_render_save_lowres_source', 'pixel_render_save_quantized_lowres',
+            'pixel_render_save_upscaled', 'pixel_render_palettes',
+        )
+        for prop in scene_props:
+            if hasattr(bpy.types.Scene, prop):
+                delattr(bpy.types.Scene, prop)
+        for prop in ('pixel_render_palette_override_enabled', 'pixel_render_palette_id'):
+            if hasattr(bpy.types.Object, prop):
+                delattr(bpy.types.Object, prop)
         for cls in (PAQ_PaletteItem, PAQ_PaletteColor):
-            bpy.utils.unregister_class(cls)
+            try:
+                bpy.utils.unregister_class(cls)
+            except RuntimeError:
+                pass
