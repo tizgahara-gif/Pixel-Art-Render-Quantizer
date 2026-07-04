@@ -4,7 +4,10 @@ if bpy:
  class PAQ_PT_render(bpy.types.Panel):
     bl_label='Pixel Art Render Quantizer'; bl_space_type='PROPERTIES'; bl_region_type='WINDOW'; bl_context='render'
     def draw(self,context):
-        s=context.scene; l=self.layout; l.prop(s,'pixel_render_mode');
+        s=context.scene
+        from .properties import sync_selected_palette_color
+        sync_selected_palette_color(s)
+        l=self.layout; l.prop(s,'pixel_render_mode');
         if s.pixel_render_mode=='INDIVIDUAL': l.label(text='Individual assignment data is stored, but rendering is not active in v1.0.', icon='ERROR')
         l.prop(s,'pixel_render_look_palette_id',text='Look Palette'); l.operator('paq.quick_render_check'); l.operator('paq.render_quantize')
         box=l.box(); box.label(text='Output Size'); box.prop(s,'pixel_render_resolution_preset'); box.prop(s,'pixel_render_width'); box.prop(s,'pixel_render_height'); box.prop(s,'pixel_render_scale'); box.label(text=f'Final Output Size: {s.pixel_render_width*int(s.pixel_render_scale)} x {s.pixel_render_height*int(s.pixel_render_scale)}'); box.prop(s,'pixel_render_sync_blender_resolution')

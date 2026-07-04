@@ -32,8 +32,8 @@ def nearest_color(pixel, palette):
     r, g, b = pixel[:3]
     return min(palette, key=lambda c: (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2)
 
-def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, **look):
-    usable = select_usable_colors(palette_colors, reserved_indices, usable_color_count)
+def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, enabled_indices=None, **look):
+    usable = select_usable_colors(palette_colors, reserved_indices, usable_color_count, enabled_indices)
     if not usable:
         raise ValueError("Palette has no active quantization colors")
     out=[]
