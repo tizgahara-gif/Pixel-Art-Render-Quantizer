@@ -91,13 +91,14 @@ def apply_assignment_curve_to_pixel(pixel, curve_points, strength=1.0):
     target_lum = lerp(lum, mapped_lum, strength)
 
     if lum <= 1e-6:
-        scale = 0.0
+        rr = clamp01(target_lum)
+        gg = clamp01(target_lum)
+        bb = clamp01(target_lum)
     else:
         scale = target_lum / lum
-
-    rr = clamp01(r * scale)
-    gg = clamp01(g * scale)
-    bb = clamp01(b * scale)
+        rr = clamp01(r * scale)
+        gg = clamp01(g * scale)
+        bb = clamp01(b * scale)
 
     return (rr, gg, bb, a)
 

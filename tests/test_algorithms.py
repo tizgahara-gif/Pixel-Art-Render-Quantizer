@@ -49,6 +49,12 @@ def test_assignment_curve_identity():
     assert abs(p[0] - 0.4) < 1e-6
 
 
+def test_assignment_curve_black_point_lifts_pure_black():
+    points = [(0.0,0.2),(0.25,0.25),(0.5,0.5),(0.75,0.75),(1.0,1.0)]
+    p = apply_assignment_curve_to_pixel((0.0,0.0,0.0,1.0), points, 1.0)
+    assert p == (0.2, 0.2, 0.2, 1.0)
+
+
 def test_assignment_curve_darkens_midtones():
     points = [(0.0,0.0),(0.25,0.1),(0.5,0.25),(0.75,0.6),(1.0,1.0)]
     p = apply_assignment_curve_to_pixel((0.5,0.5,0.5,1.0), points, 1.0)
@@ -396,6 +402,16 @@ def test_extract_palette_median_cut_filters_alpha_and_sorts_by_luminance():
     assert all(color[3] == 1.0 for color in colors)
     luminances = [0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] for c in colors]
     assert luminances == sorted(luminances)
+
+
+def test_extract_palette_median_cut_dedupes_low_color_renders():
+    from pixel_art_render_quantizer.palette_extract import extract_palette_median_cut
+
+    pixels = [(0.25, 0.5, 0.75, 1.0)] * 64
+
+    colors = extract_palette_median_cut(pixels, 16)
+
+    assert colors == [(0.25, 0.5, 0.75, 1.0)]
 
 
 def test_extract_palette_median_cut_accepts_arbitrary_target_counts():

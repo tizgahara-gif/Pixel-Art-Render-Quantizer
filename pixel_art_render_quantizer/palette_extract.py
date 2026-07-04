@@ -31,6 +31,22 @@ def _luminance(color):
     return 0.2126 * color[0] + 0.7152 * color[1] + 0.0722 * color[2]
 
 
+def _dedupe_colors(colors, precision=6):
+    seen = set()
+    out = []
+    for color in colors:
+        key = (
+            round(color[0], precision),
+            round(color[1], precision),
+            round(color[2], precision),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(color)
+    return out
+
+
 def _sample_evenly(colors, max_samples):
     if len(colors) <= max_samples:
         return colors
@@ -71,6 +87,13 @@ def extract_palette_median_cut(pixels, target_count, alpha_threshold=0.05, max_s
         raise ValueError('No opaque pixels found in render')
 
     colors = _sample_evenly(colors, int(max_samples))
+    colors = _dedupe_colors(colors)
+
+    if len(colors) <= target_count:
+        palette = [(c[0], c[1], c[2], 1.0) for c in colors]
+        palette.sort(key=_luminance)
+        return palette
+
     boxes = [colors]
 
     while len(boxes) < target_count:
@@ -83,7 +106,7 @@ def extract_palette_median_cut(pixels, target_count, alpha_threshold=0.05, max_s
             if score > split_score:
                 split_index = index
                 split_score = score
-        if split_index is None:
+        if split_index is None or split_score <= 1e-8:
             break
         box = boxes.pop(split_index)
         left, right = _split_box(box)
@@ -95,5 +118,6 @@ def extract_palette_median_cut(pixels, target_count, alpha_threshold=0.05, max_s
             break
 
     palette = [_average_color(box) for box in boxes if box]
+    palette = _dedupe_colors(palette)
     palette.sort(key=_luminance)
     return palette[:target_count]

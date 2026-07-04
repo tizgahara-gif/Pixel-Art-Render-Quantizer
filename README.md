@@ -42,6 +42,36 @@ State symbols:
 
 Built-in palettes are read-only. To change the color limit for a built-in palette, use **Change Limit (Duplicate as Custom)** and edit the duplicated Custom Palette.
 
+## Extract Palette from Render
+
+**Extract Palette from Render** creates a Custom Palette from a standard Blender render before Pixel Render quantization.
+
+This feature does not extract colors from `Pixel_Render_Check`. It renders the current scene using the current Blender render settings, saves that render internally as a temporary PNG, reads the pixels, and extracts representative colors using a Median Cut style algorithm.
+
+The extracted palette is added as a Scene Custom Palette and automatically assigned as the current Look Palette.
+
+You can specify the number of colors to extract.
+
+Default: 16 colors  
+Allowed range: 2 to 256 colors
+
+If the render contains fewer usable colors than requested, the created palette may contain fewer colors than the requested Color Count.
+
+### 日本語
+
+**Extract Palette from Render** は、Pixel Render処理前の通常レンダー画像からCustom Paletteを作成する機能です。
+
+`Pixel_Render_Check` から色を拾う機能ではありません。
+
+現在のBlenderレンダー設定で通常レンダーを実行し、一時PNGとして読み込んだ画像から代表色を抽出します。
+
+抽出色数はユーザーが指定できます。
+
+初期値は16色です。  
+指定可能範囲は2〜256色です。
+
+レンダー画像内の有効色が少ない場合、指定した色数より少ないPaletteが作成されることがあります。
+
 ## Palette Assignment Curve
 
 **Palette Assignment Curve** remaps the rendered pixel luminance before nearest palette color matching. It does not edit or regenerate palette colors; it only changes which existing palette color each processed pixel is likely to be assigned to.
