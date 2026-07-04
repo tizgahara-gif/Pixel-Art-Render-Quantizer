@@ -4,10 +4,12 @@ Blender add-on implementing a v1.0 pixel-art render post-process flow: Start Pix
 
 Install by copying `pixel_art_render_quantizer/` into Blender's add-ons directory and enabling **Pixel Art Render Quantizer**.
 
-## Palette Manager notes
+## Camera Frame Sync
 
-Palette Grid displays only the color index and state markers. HEX color codes are not shown inside swatch cells.
+Camera Frame Syncを有効にすると、Pixel Renderの設定に合わせてBlender本体のRender Resolutionも更新されます。
 
-State markers are `R` for reserved colors, `X` for quantization-disabled colors, and `O` for the outline color.
+これにより、Camera Viewのカメラ枠がPixel Renderの最終出力比率と一致します。
 
-Palette Color Limit / Usable Color Count sets the maximum number of colors used for quantization. Built-in palettes have palette-specific defaults, and Custom / External palettes can be changed individually.
+推奨設定は Sync Final Output Size です。
+
+Quick Render Check内部では、従来通りPixel Render Sizeで一時レンダーし、処理後にBlender本体のRender Resolutionへ戻します。

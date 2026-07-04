@@ -1,7 +1,7 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
 from .palettes_builtin import DEFAULT_PALETTE_ID
-from .properties import sync_selected_palette_color
+from .properties import sync_camera_frame_to_pixel_render, sync_selected_palette_color
 
 def get_compositor_node_tree(scene):
     scene.use_nodes = True
@@ -17,6 +17,8 @@ if bpy:
         s=context.scene; s.pixel_render_active=True; s.pixel_render_mode='ALL_IN_ONE'; s.pixel_render_look_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_global_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_background_palette_id=DEFAULT_PALETTE_ID
         s.pixel_render_width=320; s.pixel_render_height=180; s.pixel_render_scale='4'
         sync_selected_palette_color(s)
+        sync_camera_frame_to_pixel_render(s)
+        self.report({'INFO'}, 'Pixel Render started. Camera frame synced to Pixel Render output size.')
         return {'FINISHED'}
  class PAQ_OT_stop_pixel_render(bpy.types.Operator):
     bl_idname='paq.stop_pixel_render'; bl_label='Stop Pixel Render'; bl_options={'REGISTER','UNDO'}
