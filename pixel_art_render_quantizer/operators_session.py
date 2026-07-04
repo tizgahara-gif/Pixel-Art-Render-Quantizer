@@ -6,7 +6,7 @@ if bpy:
  class PAQ_OT_start_pixel_render(bpy.types.Operator):
     bl_idname='paq.start_pixel_render'; bl_label='Start Pixel Render'; bl_options={'REGISTER','UNDO'}
     def execute(self, context):
-        s=context.scene; s.pixel_render_active=True; s.pixel_render_mode='ALL_IN_ONE'; s.pixel_render_look_palette_id=DEFAULT_PALETTE_ID
+        s=context.scene; s.pixel_render_active=True; s.pixel_render_mode='ALL_IN_ONE'; s.pixel_render_look_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_global_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_background_palette_id=DEFAULT_PALETTE_ID
         s.pixel_render_width=320; s.pixel_render_height=180; s.pixel_render_scale='4'
         bpy.ops.paq.update_preview_nodes()
         return {'FINISHED'}
