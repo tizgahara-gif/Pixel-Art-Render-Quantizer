@@ -3,6 +3,7 @@ except ModuleNotFoundError: bpy=None
 # TODO: Localize report messages.
 from .palettes_builtin import DEFAULT_PALETTE_ID
 from .properties import sync_camera_frame_to_pixel_render, sync_selected_palette_color
+from .curve_mapping_store import get_or_create_assignment_curve_owner
 
 def get_compositor_node_tree(scene):
     scene.use_nodes = True
@@ -41,6 +42,10 @@ if bpy:
             s.pixel_render_scale='4'
         sync_selected_palette_color(s)
         sync_camera_frame_to_pixel_render(s)
+        try:
+            get_or_create_assignment_curve_owner(s)
+        except Exception as exc:
+            self.report({'WARNING'}, f'Assignment curve could not be initialized: {exc}')
         tag_redraw_all_areas(context)
         self.report({'INFO'}, 'Pixel Render started. Camera frame synced to Pixel Render output size.')
         return {'FINISHED'}
