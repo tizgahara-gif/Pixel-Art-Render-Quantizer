@@ -1,5 +1,6 @@
 """Blender property definitions and palette data management."""
 from __future__ import annotations
+from .i18n import LANGUAGE_ITEMS
 from .palettes_builtin import BUILTIN_PALETTES, DEFAULT_PALETTE_ID
 from .utils import hex_to_rgba, luminance, new_id, sanitize_palette_name
 
@@ -212,6 +213,12 @@ if bpy:
         bpy.utils.register_class(PAQ_PaletteColor); bpy.utils.register_class(PAQ_PaletteItem)
         s = bpy.types.Scene
         s.pixel_render_active = bpy.props.BoolProperty(default=False, options=set())
+        s.pixel_render_ui_language = bpy.props.EnumProperty(
+            name="UI Language",
+            items=LANGUAGE_ITEMS,
+            default="EN",
+            description="Display language for Pixel Art Render Quantizer UI",
+        )
         s.pixel_render_mode = bpy.props.EnumProperty(items=MODE_ITEMS, default="ALL_IN_ONE")
         s.pixel_render_resolution_preset = bpy.props.EnumProperty(items=PRESET_ITEMS + [("CUSTOM", "Custom", "")], default="320x180", update=_apply_preset)
         s.pixel_render_width = bpy.props.IntProperty(default=320, min=1, update=_sync_resolution)
@@ -256,7 +263,8 @@ if bpy:
 
     def unregister_properties():
         scene_props = (
-            'pixel_render_active', 'pixel_render_mode', 'pixel_render_resolution_preset',
+            'pixel_render_active', 'pixel_render_ui_language',
+            'pixel_render_mode', 'pixel_render_resolution_preset',
             'pixel_render_width', 'pixel_render_height', 'pixel_render_scale',
             'pixel_render_lock_aspect', 'pixel_render_camera_frame_sync_mode',
             'pixel_render_look_palette_id', 'pixel_render_global_palette_id',

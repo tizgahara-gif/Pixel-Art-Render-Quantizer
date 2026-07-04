@@ -116,3 +116,17 @@ When enabled, the Camera View frame matches the final Pixel Render output aspect
 ## Notes
 
 The add-on intentionally avoids reading `Render Result.pixels` directly. Low-resolution renders are saved through a temporary PNG and reloaded as a normal Blender Image before quantization.
+
+## UI Language
+
+The add-on UI can be switched between English and Japanese from the Render Properties panel.
+
+This language setting affects the add-on panels and button labels.  
+Some Blender internal labels and technical report messages may remain in English.
+
+## 表示言語
+
+Render Propertiesパネルから、アドオンUIの表示言語をEnglish / 日本語で切り替えられます。
+
+この設定は、アドオンのパネル表示やボタン文言に適用されます。  
+Blender内部の表示や一部の技術的な通知メッセージは英語のまま残る場合があります。
