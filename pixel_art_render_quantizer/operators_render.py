@@ -1,6 +1,6 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
-from .palettes_builtin import BUILTIN_PALETTES
+from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .utils import hex_to_rgba, luminance
 from .properties import default_reserved_indices
 from .quantize import quantize_pixels
@@ -11,7 +11,7 @@ from .image_output import pixels_to_image, show_image_in_editors
 
 def palette_for_scene(scene, palette_id):
     if palette_id in BUILTIN_PALETTES:
-        colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]; reserved=default_reserved_indices(colors); return colors, reserved, max(1,len(colors)-len(reserved)), list(range(len(colors)))
+        colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]; reserved=default_reserved_indices(colors); usable=builtin_default_usable_count(palette_id, color_count=len(colors), reserved_count=len(reserved)); return colors, reserved, usable, list(range(len(colors)))
     for p in scene.pixel_render_palettes:
         if p.id==palette_id:
             return [c.color[:] for c in p.colors], [i for i,c in enumerate(p.colors) if c.reserved], p.usable_color_count, [i for i,c in enumerate(p.colors) if c.quantization_enabled]
