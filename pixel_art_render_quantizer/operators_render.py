@@ -37,26 +37,36 @@ if bpy:
         mode_error=individual_mode_error(s)
         if mode_error: self.report({'ERROR'},mode_error); return {'CANCELLED'}
         if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
-        w,h=s.pixel_render_width,s.pixel_render_height
-        with temporary_render_resolution(s,w,h): bpy.ops.render.render(write_still=False)
-        img=bpy.data.images['Render Result']
-        if hasattr(img,'size') and tuple(img.size[:2]) != (w,h):
-            self.report({'ERROR'},'Render Result size does not match Pixel Render Size. Check render border/crop settings.')
+        requested_w,requested_h=s.pixel_render_width,s.pixel_render_height
+        with temporary_render_resolution(s,requested_w,requested_h): bpy.ops.render.render(write_still=False)
+        img=bpy.data.images.get('Render Result')
+        if img is None:
+            self.report({'ERROR'},'Render Result was not created.')
             return {'CANCELLED'}
+        actual_w,actual_h=tuple(img.size[:2]) if hasattr(img,'size') else (requested_w,requested_h)
         pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
+        pixel_count=len(pixels)
+        if actual_w <= 0 or actual_h <= 0:
+            self.report({'ERROR'},'Render Result has invalid size.')
+            return {'CANCELLED'}
+        if pixel_count != actual_w * actual_h:
+            self.report({'ERROR'},f'Render Result pixel count mismatch: size={actual_w}x{actual_h}, pixels={pixel_count}')
+            return {'CANCELLED'}
+        if (actual_w,actual_h) != (requested_w,requested_h):
+            self.report({'WARNING'},f'Render Result size differs from Pixel Render Size: requested={requested_w}x{requested_h}, actual={actual_w}x{actual_h}. Using actual size.')
         try:
-            low=process_pixels(s,pixels,w,h)
+            low=process_pixels(s,pixels,actual_w,actual_h)
         except ValueError as exc:
             self.report({'ERROR'},str(exc))
             return {'CANCELLED'}
-        up,uw,uh=upscale_nearest(low,w,h,int(s.pixel_render_scale))
+        up,uw,uh=upscale_nearest(low,actual_w,actual_h,int(s.pixel_render_scale))
         out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
         if save:
             import os
             base=bpy.path.abspath(s.pixel_render_output_path); os.makedirs(base,exist_ok=True)
             if s.pixel_render_save_upscaled: out.filepath_raw=os.path.join(base,'pixel_render_upscaled.png'); out.file_format='PNG'; out.save()
             if s.pixel_render_save_quantized_lowres:
-                lowimg=pixels_to_image('Pixel_Render_Lowres_Quantized',low,w,h); lowimg.filepath_raw=os.path.join(base,'pixel_render_lowres_quantized.png'); lowimg.file_format='PNG'; lowimg.save()
+                lowimg=pixels_to_image('Pixel_Render_Lowres_Quantized',low,actual_w,actual_h); lowimg.filepath_raw=os.path.join(base,'pixel_render_lowres_quantized.png'); lowimg.file_format='PNG'; lowimg.save()
         return {'FINISHED'}
  class PAQ_OT_quick_render_check(bpy.types.Operator,_RenderBase):
     bl_idname='paq.quick_render_check'; bl_label='Quick Render Check'; bl_options={'REGISTER'}
