@@ -363,3 +363,65 @@ def test_sync_camera_frame_lowres_and_none_modes():
     sync_camera_frame_to_pixel_render(none_scene)
     assert (none_scene.render.resolution_x, none_scene.render.resolution_y) == (1920, 1080)
     assert (none_scene.render.pixel_aspect_x, none_scene.render.pixel_aspect_y) == (2.0, 1.5)
+
+
+def test_extract_palette_median_cut_filters_alpha_and_sorts_by_luminance():
+    from pixel_art_render_quantizer.palette_extract import extract_palette_median_cut
+
+    pixels = [
+        (0.0, 0.0, 0.0, 0.0),
+        (0.0, 0.0, 0.0, 1.0),
+        (1.0, 1.0, 1.0, 1.0),
+        (1.0, 0.0, 0.0, 1.0),
+        (0.0, 0.0, 1.0, 1.0),
+    ]
+
+    colors = extract_palette_median_cut(pixels, 4)
+
+    assert 1 <= len(colors) <= 4
+    assert all(color[3] == 1.0 for color in colors)
+    luminances = [0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] for c in colors]
+    assert luminances == sorted(luminances)
+
+
+def test_extract_palette_median_cut_accepts_arbitrary_target_counts():
+    from pixel_art_render_quantizer.palette_extract import extract_palette_median_cut
+
+    pixels = [((i % 5) / 4, ((i // 5) % 5) / 4, ((i // 25) % 5) / 4, 1.0) for i in range(125)]
+
+    colors = extract_palette_median_cut(pixels, 12)
+
+    assert len(colors) == 12
+
+
+def test_extract_palette_median_cut_rejects_out_of_range_or_empty_input():
+    from pixel_art_render_quantizer.palette_extract import extract_palette_median_cut
+
+    with pytest.raises(ValueError, match='at least 2'):
+        extract_palette_median_cut([(1.0, 0.0, 0.0, 1.0)], 1)
+    with pytest.raises(ValueError, match='256 or less'):
+        extract_palette_median_cut([(1.0, 0.0, 0.0, 1.0)], 257)
+    with pytest.raises(ValueError, match='No opaque pixels'):
+        extract_palette_median_cut([(1.0, 0.0, 0.0, 0.01)], 4)
+
+
+def test_create_custom_palette_from_colors_sets_scene_custom_defaults():
+    from pixel_art_render_quantizer.operators_palette import create_custom_palette_from_colors
+
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
+    pal = create_custom_palette_from_colors(
+        scene,
+        'Extracted Render',
+        [(0.1, 0.2, 0.3, 1.0), (0.8, 0.7, 0.6, 1.0)],
+        usable_color_count=2,
+    )
+
+    assert pal.type == 'CUSTOM_SCENE'
+    assert pal.source_builtin_id == ''
+    assert pal.name == 'Extracted Render'
+    assert pal.usable_color_count == 2
+    assert pal.outline_index == 0
+    assert [(c.reserved, c.quantization_enabled, c.use_as_outline) for c in pal.colors] == [
+        (False, True, False),
+        (False, True, False),
+    ]

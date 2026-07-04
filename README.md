@@ -42,6 +42,17 @@ State symbols:
 
 Built-in palettes are read-only. To change the color limit for a built-in palette, use **Change Limit (Duplicate as Custom)** and edit the duplicated Custom Palette.
 
+
+## Extract Palette from Render
+
+**Extract Palette from Render** creates a Custom Palette from the standard Blender render image before Pixel Render processing.
+
+You can specify the number of colors to extract. The default is 16 colors. The supported range is 2 to 256 colors.
+
+The extracted palette is saved as a Scene Custom Palette and is automatically selected as the Look Palette. It appears in the Palette Grid and is used by Quick Render Check. If the render has too few valid pixels or colors, the created palette may contain fewer colors than requested.
+
+This feature does not pick colors from `Pixel_Render_Check`. It extracts representative colors from the normal Blender render result before Pixel Render / Palette Quantize is applied.
+
 ## Camera Frame Sync
 
 Camera Frame Sync synchronizes Blender's Render Resolution to the Pixel Render settings.
@@ -59,7 +70,6 @@ When enabled, the Camera View frame matches the final Pixel Render output aspect
 - Silhouette Outline is not implemented.
 - Refraction handling is not implemented.
 - Aseprite file loading is not implemented.
-- Automatic palette extraction from images is not implemented.
 
 ## Notes
 
