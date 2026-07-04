@@ -9,6 +9,8 @@ from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, new_id, sanitize_palette_name
 from .palette_io_gpl import parse_gpl, write_gpl
+from .palette_extract import extract_palette_median_cut
+from .render_pipeline import render_standard_to_pixels
 
 def _unique_palette_name(scene, base, exclude=None):
     base=sanitize_palette_name(base) or 'Palette_Custom'
@@ -38,6 +40,26 @@ def create_custom_from_palette(scene, palette_id):
 
 def create_custom_from_builtin(scene, builtin_id):
     return create_custom_from_palette(scene, builtin_id)
+
+
+def create_custom_palette_from_colors(scene, name, colors, usable_color_count=0):
+    """Create a custom scene palette from RGBA colors."""
+    pal = scene.pixel_render_palettes.add()
+    pal.id = new_id('palette')
+    pal.type = 'CUSTOM_SCENE'
+    pal.source_builtin_id = ''
+    pal.name = _unique_palette_name(scene, name, exclude=pal)
+
+    for color in colors:
+        pc = pal.colors.add()
+        pc.color = color
+        pc.reserved = False
+        pc.quantization_enabled = True
+        pc.use_as_outline = False
+
+    pal.usable_color_count = usable_color_count
+    pal.outline_index = 0
+    return pal
 
 def load_gpl_into_scene(scene, filepath):
     if not filepath:
@@ -182,6 +204,55 @@ if bpy:
         for i,p in enumerate(pals):
             if p.id==context.scene.pixel_render_look_palette_id: pals.remove(i); context.scene.pixel_render_look_palette_id='PAQ_ModernCool_32'; return {'FINISHED'}
         return {'CANCELLED'}
+
+ class PAQ_OT_extract_palette_from_render(bpy.types.Operator):
+    bl_idname = 'paq.extract_palette_from_render'
+    bl_label = 'Extract Palette from Render'
+    bl_options = {'REGISTER', 'UNDO'}
+
+    target_count: bpy.props.IntProperty(
+        name='Color Count',
+        description='Number of colors to extract from the standard render',
+        default=16,
+        min=2,
+        max=256,
+    )
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        scene = context.scene
+
+        try:
+            target_count = int(self.target_count)
+            pixels, w, h = render_standard_to_pixels(scene)
+            colors = extract_palette_median_cut(
+                pixels,
+                target_count=target_count,
+                alpha_threshold=0.05,
+                max_samples=20000,
+            )
+            pal = create_custom_palette_from_colors(
+                scene,
+                name=f'Extracted_Render_{len(colors)}',
+                colors=colors,
+                usable_color_count=len(colors),
+            )
+            scene.pixel_render_look_palette_id = pal.id
+
+            from .properties import sync_selected_palette_color
+            sync_selected_palette_color(scene)
+
+        except Exception as exc:
+            self.report({'ERROR'}, f'Failed to extract palette: {exc}')
+            return {'CANCELLED'}
+
+        self.report(
+            {'INFO'},
+            f'Extracted {len(colors)} colors from standard render: {pal.name}'
+        )
+        return {'FINISHED'}
  class PAQ_OT_load_gpl(bpy.types.Operator, ImportHelper):
     bl_idname='paq.load_gpl_palette'; bl_label='Load .gpl'; bl_options={'REGISTER','UNDO'}
     filename_ext='.gpl'; filter_glob:bpy.props.StringProperty(default='*.gpl', options={'HIDDEN'}); filepath:bpy.props.StringProperty(subtype='FILE_PATH')
@@ -198,4 +269,4 @@ if bpy:
         try: export_gpl_from_scene(context.scene, self.filepath)
         except Exception as exc: self.report({'ERROR'},f'Failed to export .gpl: {exc}'); return {'CANCELLED'}
         return {'FINISHED'}
- classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+ classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
