@@ -6,7 +6,7 @@ from .properties import default_reserved_indices
 from .quantize import quantize_pixels
 from .alpha import apply_alpha
 from .outline import apply_outline
-from .render_pipeline import temporary_render_resolution, upscale_nearest
+from .render_pipeline import render_lowres_to_pixels, upscale_nearest
 from .image_output import pixels_to_image, show_image_in_editors
 
 def palette_for_scene(scene, palette_id):
@@ -21,6 +21,9 @@ def individual_mode_error(scene):
     if getattr(scene, 'pixel_render_mode', 'ALL_IN_ONE') == 'INDIVIDUAL':
         return 'Individual Palette Mode rendering is not implemented in v1.0. Switch to ALL in ONE for render output.'
     return None
+
+def count_unique_rgb(pixels):
+    return len({(round(p[0],6),round(p[1],6),round(p[2],6)) for p in pixels})
 
 def process_pixels(scene, pixels, w, h):
     colors,reserved,usable,enabled=palette_for_scene(scene, scene.pixel_render_look_palette_id)
@@ -38,33 +41,20 @@ if bpy:
         if mode_error: self.report({'ERROR'},mode_error); return {'CANCELLED'}
         if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
         requested_w,requested_h=s.pixel_render_width,s.pixel_render_height
-        with temporary_render_resolution(s,requested_w,requested_h): bpy.ops.render.render(write_still=False)
-        img=bpy.data.images.get('Render Result')
-        if img is None:
-            self.report({'ERROR'},'Render Result was not created.')
-            return {'CANCELLED'}
-        size=tuple(img.size[:2]) if hasattr(img,'size') else (0,0)
-        size_w,size_h=int(size[0]),int(size[1])
-        pixels=[tuple(img.pixels[i:i+4]) for i in range(0,len(img.pixels),4)]
-        pixel_count=len(pixels)
-        if size_w > 0 and size_h > 0:
-            actual_w,actual_h=size_w,size_h
-        else:
-            actual_w,actual_h=requested_w,requested_h
-            self.report({'WARNING'},f'Render Result reported invalid size {size_w}x{size_h}. Falling back to requested size {requested_w}x{requested_h}.')
-        if actual_w <= 0 or actual_h <= 0:
-            self.report({'ERROR'},f'Invalid render size: actual={actual_w}x{actual_h}, requested={requested_w}x{requested_h}, pixels={pixel_count}')
-            return {'CANCELLED'}
-        if pixel_count != actual_w * actual_h:
-            self.report({'ERROR'},f'Render Result pixel count mismatch: actual={actual_w}x{actual_h}, requested={requested_w}x{requested_h}, pixels={pixel_count}')
+        try:
+            pixels,actual_w,actual_h=render_lowres_to_pixels(s,requested_w,requested_h)
+        except Exception as exc:
+            self.report({'ERROR'},f'Low-resolution render failed: {exc}')
             return {'CANCELLED'}
         if (actual_w,actual_h) != (requested_w,requested_h):
-            self.report({'WARNING'},f'Render Result size differs from Pixel Render Size: requested={requested_w}x{requested_h}, actual={actual_w}x{actual_h}. Using actual size.')
+            self.report({'WARNING'},f'Rendered size differs from Pixel Render Size: requested={requested_w}x{requested_h}, actual={actual_w}x{actual_h}. Using actual size.')
         try:
             low=process_pixels(s,pixels,actual_w,actual_h)
         except ValueError as exc:
             self.report({'ERROR'},str(exc))
             return {'CANCELLED'}
+        unique_count=count_unique_rgb(low)
+        self.report({'INFO'},f'Palette applied: {s.pixel_render_look_palette_id}, unique RGB colors={unique_count}')
         up,uw,uh=upscale_nearest(low,actual_w,actual_h,int(s.pixel_render_scale))
         out=pixels_to_image('Pixel_Render_Check' if not save else 'Pixel_Render_Quantized',up,uw,uh); show_image_in_editors(out,context)
         if save:
