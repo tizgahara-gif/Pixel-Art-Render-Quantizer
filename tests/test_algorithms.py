@@ -45,7 +45,7 @@ def test_gpl_roundtrip_and_name_sanitize():
 from types import SimpleNamespace
 import pytest
 from pixel_art_render_quantizer.render_pipeline import temporary_render_resolution
-from pixel_art_render_quantizer.operators_palette import create_custom_from_palette, load_gpl_into_scene
+from pixel_art_render_quantizer.operators_palette import create_custom_from_palette, load_gpl_into_scene, ensure_editable_palette, validate_palette_rename, set_outline_color
 from pixel_art_render_quantizer.operators_render import individual_mode_error
 
 
@@ -61,12 +61,14 @@ def _color_item(color):
 
 
 def test_temporary_render_resolution_restores_percentage_on_exception():
-    scene = SimpleNamespace(render=SimpleNamespace(resolution_x=1920, resolution_y=1080, resolution_percentage=50))
+    scene = SimpleNamespace(render=SimpleNamespace(resolution_x=1920, resolution_y=1080, resolution_percentage=50, use_border=True, use_crop_to_border=True))
     with pytest.raises(RuntimeError):
         with temporary_render_resolution(scene, 320, 180):
             assert (scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage) == (320, 180, 100)
+            assert (scene.render.use_border, scene.render.use_crop_to_border) == (False, False)
             raise RuntimeError('boom')
     assert (scene.render.resolution_x, scene.render.resolution_y, scene.render.resolution_percentage) == (1920, 1080, 50)
+    assert (scene.render.use_border, scene.render.use_crop_to_border) == (True, True)
 
 
 def test_load_gpl_into_scene_empty_path_cancels_before_open():
@@ -92,3 +94,28 @@ def test_duplicate_custom_palette_copies_scene_palette_and_unique_name():
 def test_individual_mode_reports_unimplemented_before_render():
     scene = SimpleNamespace(pixel_render_mode='INDIVIDUAL')
     assert individual_mode_error(scene) == 'Individual Palette Mode rendering is not implemented in v1.0. Switch to ALL in ONE for render output.'
+
+
+def test_builtin_palette_edit_ensures_custom_palette():
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection(), pixel_render_look_palette_id='PAQ_ModernCool_08')
+    pal = ensure_editable_palette(scene)
+    assert pal.id == scene.pixel_render_look_palette_id
+    assert pal.type == 'CUSTOM_SCENE'
+    assert pal.source_builtin_id == 'PAQ_ModernCool_08'
+    assert 'PAQ_ModernCool_08' in pal.name
+
+
+def test_rename_palette_validation_rejects_duplicate_and_sanitizes():
+    scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
+    scene.pixel_render_palettes.extend([SimpleNamespace(id='a', name='First'), SimpleNamespace(id='b', name='Second')])
+    assert validate_palette_rename(scene, 'a', 'new/name:*') == 'new_name__'
+    with pytest.raises(ValueError, match='Duplicate'):
+        validate_palette_rename(scene, 'a', 'Second')
+
+
+def test_set_outline_color_is_exclusive_and_updates_index():
+    pal = SimpleNamespace(colors=FakeCollection(), outline_index=0)
+    pal.colors.extend([SimpleNamespace(use_as_outline=False), SimpleNamespace(use_as_outline=False), SimpleNamespace(use_as_outline=True)])
+    set_outline_color(pal, 1, True)
+    assert [c.use_as_outline for c in pal.colors] == [False, True, False]
+    assert pal.outline_index == 1
