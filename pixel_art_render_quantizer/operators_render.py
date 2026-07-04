@@ -63,7 +63,7 @@ if bpy:
             if shown:
                 self.report({'INFO'}, 'Quick Render Check completed. Showing Pixel_Render_Check.')
             else:
-                self.report({'WARNING'}, 'Quick Render Check completed as Pixel_Render_Check, but no Image Editor area is open.')
+                self.report({'INFO'}, 'Quick Render Check completed. Result image is Pixel_Render_Check. Use Open Pixel_Render_Check to view it.')
         else:
             if shown:
                 self.report({'INFO'}, 'Render & Quantize completed. Showing Pixel_Render_Quantized.')
@@ -82,4 +82,35 @@ if bpy:
  class PAQ_OT_render_quantize(bpy.types.Operator,_RenderBase):
     bl_idname='paq.render_quantize'; bl_label='Render & Quantize'; bl_options={'REGISTER'}
     def execute(self,context): return self._run(context,True)
- classes=(PAQ_OT_quick_render_check,PAQ_OT_render_quantize)
+
+ class PAQ_OT_open_pixel_render_check(bpy.types.Operator):
+    bl_idname='paq.open_pixel_render_check'; bl_label='Open Pixel_Render_Check'; bl_options={'REGISTER'}
+    def execute(self,context):
+        img=bpy.data.images.get('Pixel_Render_Check')
+        if img is None:
+            self.report({'ERROR'}, 'Pixel_Render_Check does not exist. Run Quick Render Check first.')
+            return {'CANCELLED'}
+        screen=getattr(context, 'screen', None)
+        if not screen:
+            self.report({'ERROR'}, 'No active screen is available.')
+            return {'CANCELLED'}
+        for area in screen.areas:
+            if area.type == 'IMAGE_EDITOR':
+                area.spaces.active.image = img
+                area.tag_redraw()
+                self.report({'INFO'}, 'Showing Pixel_Render_Check.')
+                return {'FINISHED'}
+        area=getattr(context, 'area', None)
+        if area is not None:
+            try:
+                area.type = 'IMAGE_EDITOR'
+                area.spaces.active.image = img
+                area.tag_redraw()
+                self.report({'INFO'}, 'Opened current area as Image Editor and showing Pixel_Render_Check.')
+                return {'FINISHED'}
+            except Exception as exc:
+                self.report({'ERROR'}, f'Failed to open Pixel_Render_Check: {exc}')
+                return {'CANCELLED'}
+        self.report({'ERROR'}, 'No Image Editor area is open. Open an Image Editor and select Pixel_Render_Check.')
+        return {'CANCELLED'}
+ classes=(PAQ_OT_quick_render_check,PAQ_OT_render_quantize,PAQ_OT_open_pixel_render_check)
