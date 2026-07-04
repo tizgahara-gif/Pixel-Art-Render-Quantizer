@@ -9,6 +9,15 @@ def pixels_to_image(name,pixels,width,height):
     return img
 
 def show_image_in_editors(image, context):
-    for area in context.screen.areas:
+    shown = False
+    screen = getattr(context, "screen", None)
+    if not screen:
+        return False
+
+    for area in screen.areas:
         if area.type == 'IMAGE_EDITOR':
             area.spaces.active.image = image
+            area.tag_redraw()
+            shown = True
+
+    return shown

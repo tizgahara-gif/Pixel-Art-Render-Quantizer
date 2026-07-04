@@ -86,6 +86,9 @@ def clamp_selected_color_index(scene, pal):
     scene.pixel_render_selected_color_index = idx
     return idx
 
+def palette_candidate_count(pal):
+    return sum(1 for color in pal.colors if not color.reserved and color.quantization_enabled)
+
 def set_outline_color(pal, index, enabled):
     if enabled:
         for i, color in enumerate(pal.colors):
@@ -169,7 +172,7 @@ if bpy:
             pal=ensure_editable_palette(context.scene)
         except Exception as exc:
             self.report({'ERROR'},str(exc)); return {'CANCELLED'}
-        max_count=len(pal.colors)
+        max_count=palette_candidate_count(pal)
         pal.usable_color_count=max(0,min(int(self.value),max_count))
         return {'FINISHED'}
  class PAQ_OT_delete_palette(bpy.types.Operator):

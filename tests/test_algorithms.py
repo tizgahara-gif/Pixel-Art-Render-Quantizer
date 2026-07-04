@@ -1,4 +1,4 @@
-from pixel_art_render_quantizer.palettes_builtin import BUILTIN_PALETTES
+from pixel_art_render_quantizer.palettes_builtin import BUILTIN_PALETTES, BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS, builtin_default_usable_count
 from pixel_art_render_quantizer.properties import default_reserved_indices, pixel_render_final_size, sync_camera_frame_to_pixel_render
 from pixel_art_render_quantizer.utils import hex_to_rgba, sanitize_palette_name
 from pixel_art_render_quantizer.quantize import select_usable_colors, quantize_pixels
@@ -18,21 +18,21 @@ def test_builtin_count_and_default_reservation():
 def test_builtin_default_usable_counts_match_palette_sizes():
     assert set(BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS) == set(BUILTIN_PALETTES)
     for palette_id, hexes in BUILTIN_PALETTES.items():
-        assert builtin_default_usable_count(palette_id, len(hexes), 1) == len(hexes)
+        assert builtin_default_usable_count(palette_id, len(hexes), 1) == max(1, len(hexes) - 1)
 
 
 def test_palette_for_scene_uses_builtin_default_usable_count():
     scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
     colors, reserved, usable, enabled = palette_for_scene(scene, 'PAQ_ModernCool_32')
     assert len(colors) == 32
-    assert usable == 32
+    assert usable == 31
     assert enabled == list(range(32))
 
 
 def test_create_custom_from_builtin_copies_default_usable_count():
     scene = SimpleNamespace(pixel_render_palettes=FakeCollection())
     pal = create_custom_from_palette(scene, 'PAQ_ModernCool_32')
-    assert pal.usable_color_count == 32
+    assert pal.usable_color_count == 31
 
 def test_reserved_color_excluded_and_usable_reduced():
     colors = [hex_to_rgba(h) for h in BUILTIN_PALETTES['PAQ_ModernCool_08']]

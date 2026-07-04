@@ -10,20 +10,45 @@ def get_compositor_node_tree(scene):
         return None
     return tree
 
+def tag_redraw_all_areas(context):
+    screen = getattr(context, "screen", None)
+    if not screen:
+        return
+    for area in screen.areas:
+        area.tag_redraw()
+
 if bpy:
  class PAQ_OT_start_pixel_render(bpy.types.Operator):
     bl_idname='paq.start_pixel_render'; bl_label='Start Pixel Render'; bl_options={'REGISTER','UNDO'}
     def execute(self, context):
-        s=context.scene; s.pixel_render_active=True; s.pixel_render_mode='ALL_IN_ONE'; s.pixel_render_look_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_global_palette_id=DEFAULT_PALETTE_ID; s.pixel_render_background_palette_id=DEFAULT_PALETTE_ID
-        s.pixel_render_width=320; s.pixel_render_height=180; s.pixel_render_scale='4'
+        s=context.scene
+        if not getattr(s, "pixel_render_active", False):
+            s.pixel_render_active=True
+        if not getattr(s, "pixel_render_mode", None):
+            s.pixel_render_mode='ALL_IN_ONE'
+        if not s.pixel_render_look_palette_id:
+            s.pixel_render_look_palette_id=DEFAULT_PALETTE_ID
+        if not s.pixel_render_global_palette_id:
+            s.pixel_render_global_palette_id=DEFAULT_PALETTE_ID
+        if not s.pixel_render_background_palette_id:
+            s.pixel_render_background_palette_id=DEFAULT_PALETTE_ID
+        if s.pixel_render_width <= 0:
+            s.pixel_render_width=320
+        if s.pixel_render_height <= 0:
+            s.pixel_render_height=180
+        if not s.pixel_render_scale:
+            s.pixel_render_scale='4'
         sync_selected_palette_color(s)
         sync_camera_frame_to_pixel_render(s)
+        tag_redraw_all_areas(context)
         self.report({'INFO'}, 'Pixel Render started. Camera frame synced to Pixel Render output size.')
         return {'FINISHED'}
  class PAQ_OT_stop_pixel_render(bpy.types.Operator):
     bl_idname='paq.stop_pixel_render'; bl_label='Stop Pixel Render'; bl_options={'REGISTER','UNDO'}
     def execute(self, context):
         s=context.scene; s.pixel_render_active=False
+        tag_redraw_all_areas(context)
+        self.report({'INFO'}, 'Pixel Render stopped.')
         return {'FINISHED'}
  class PAQ_OT_update_preview_nodes(bpy.types.Operator):
     bl_idname='paq.update_preview_nodes'; bl_label='Update Preview Nodes'; bl_options={'REGISTER','UNDO'}

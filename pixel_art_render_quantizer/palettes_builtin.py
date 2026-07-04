@@ -32,16 +32,21 @@ BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS = {
 }
 
 def builtin_default_usable_count(palette_id, color_count=None, reserved_count=0):
-    """Return the default color limit for a built-in palette.
+    """Return the built-in palette default quantization candidate limit.
 
-    The configured value is the user's desired upper bound. Callers that know
-    the palette size can pass it in to clamp the value to a safe range.
+    Reserved colors are not quantization candidates, so the configured default
+    is clamped to the candidate count (palette size minus reserved colors).
     """
     value = int(BUILTIN_PALETTE_DEFAULT_USABLE_COUNTS.get(palette_id, 0) or 0)
+
     if color_count is None:
         return max(1, value) if value else 0
+
+    candidate_count = max(1, int(color_count) - int(reserved_count))
+
     if value <= 0:
-        value = int(color_count) - int(reserved_count)
-    return max(1, min(int(value), int(color_count)))
+        value = candidate_count
+
+    return max(1, min(int(value), candidate_count))
 
 DEFAULT_PALETTE_ID = "PAQ_ModernCool_32"

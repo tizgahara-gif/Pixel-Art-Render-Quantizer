@@ -1,15 +1,66 @@
 # Pixel Art Render Quantizer
 
-Blender add-on implementing a v1.0 pixel-art render post-process flow: Start Pixel Render, Quick Render Check, RGB palette quantization, reserved colors, alpha modes, Bayer 4x4 dithering, strict 1px outline cleanup, nearest upscale, and PNG output.
+Pixel Art Render Quantizer is a Blender add-on for a v1.0 pixel-art render post-process workflow. It renders at a low pixel resolution, quantizes the result to a palette, applies alpha/outline options, upscales with nearest-neighbor filtering, and can save PNG outputs.
 
-Install by copying `pixel_art_render_quantizer/` into Blender's add-ons directory and enabling **Pixel Art Render Quantizer**.
+## Install
+
+Copy `pixel_art_render_quantizer/` into Blender's add-ons directory and enable **Pixel Art Render Quantizer**.
+
+## Basic Workflow
+
+1. Open **Render Properties > Pixel Art Render Quantizer**.
+2. Click **Start Pixel Render**.
+3. Click **Quick Render Check**.
+4. Check the generated `Pixel_Render_Check` image.
+5. Click **Render & Quantize** to output PNG files.
+6. Click **Stop Pixel Render** when you are finished.
+
+Start Pixel Render keeps valid user settings from the previous session. It only fills missing or invalid values with defaults.
+
+## Render Check Output
+
+Quick Render Check does **not** directly overwrite Blender's `Render Result`.
+
+The preview result is written to an Image named `Pixel_Render_Check`:
+
+- If an Image Editor area is open, the add-on automatically displays `Pixel_Render_Check` there.
+- If no Image Editor area is open, select `Pixel_Render_Check` manually from Blender's image list.
+
+Render & Quantize writes the displayed result to `Pixel_Render_Quantized` and saves enabled PNG outputs to the configured output directory.
+
+## Palette UI and Color Limits
+
+The Palette Grid shows only color numbers and state symbols inside the grid cells. It does not show HEX color codes inside swatches.
+
+State symbols:
+
+- `R` = Reserved
+- `X` = Quantization Disabled
+- `O` = Outline Color
+
+**Palette Color Limit** is the maximum number of quantization candidate colors. Reserved colors are not counted as candidates. For Custom / External palettes, colors with Quantization Disabled are also excluded from the candidate pool.
+
+Built-in palettes are read-only. To change the color limit for a built-in palette, use **Change Limit (Duplicate as Custom)** and edit the duplicated Custom Palette.
 
 ## Camera Frame Sync
 
-Camera Frame Syncを有効にすると、Pixel Renderの設定に合わせてBlender本体のRender Resolutionも更新されます。
+Camera Frame Sync synchronizes Blender's Render Resolution to the Pixel Render settings.
 
-これにより、Camera Viewのカメラ枠がPixel Renderの最終出力比率と一致します。
+Recommended setting: **Sync Final Output Size**.
 
-推奨設定は Sync Final Output Size です。
+When enabled, the Camera View frame matches the final Pixel Render output aspect ratio. During Quick Render Check, the add-on temporarily switches Blender's render resolution to the Pixel Render Size for the internal render, then restores the synchronized resolution after processing.
 
-Quick Render Check内部では、従来通りPixel Render Sizeで一時レンダーし、処理後にBlender本体のRender Resolutionへ戻します。
+## v1.0 Limitations
+
+- Individual Palette Mode stores palette assignments only.
+- Per-object or individual rendering for Individual Palette Mode is not implemented.
+- Object ID Mask is not implemented.
+- Depth Outline is not implemented.
+- Silhouette Outline is not implemented.
+- Refraction handling is not implemented.
+- Aseprite file loading is not implemented.
+- Automatic palette extraction from images is not implemented.
+
+## Notes
+
+The add-on intentionally avoids reading `Render Result.pixels` directly. Low-resolution renders are saved through a temporary PNG and reloaded as a normal Blender Image before quantization.
