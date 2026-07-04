@@ -119,3 +119,66 @@ def test_set_outline_color_is_exclusive_and_updates_index():
     set_outline_color(pal, 1, True)
     assert [c.use_as_outline for c in pal.colors] == [False, True, False]
     assert pal.outline_index == 1
+
+
+def test_quantize_pixels_excludes_disabled_enabled_indices():
+    colors = [hex_to_rgba('#000000'), hex_to_rgba('#FFFFFF')]
+    out = quantize_pixels([(0.0, 0.0, 0.0, 1.0)], 1, 1, colors, enabled_indices=[1])
+    assert out == [(1.0, 1.0, 1.0, 1.0)]
+
+
+def test_quantize_pixels_combines_reserved_and_disabled_filters():
+    colors = [hex_to_rgba('#000000'), hex_to_rgba('#FF0000'), hex_to_rgba('#00FF00')]
+    out = quantize_pixels([(1.0, 0.0, 0.0, 1.0)], 1, 1, colors, reserved_indices=[1], enabled_indices=[1, 2])
+    assert out == [(0.0, 1.0, 0.0, 1.0)]
+    with pytest.raises(ValueError, match='no active quantization colors'):
+        quantize_pixels([(1.0, 0.0, 0.0, 1.0)], 1, 1, colors, reserved_indices=[1], enabled_indices=[1])
+
+
+def test_builtin_palette_can_be_serialized_to_gpl_text():
+    from pixel_art_render_quantizer.operators_palette import gpl_text_from_scene_palette
+
+    scene = SimpleNamespace(pixel_render_look_palette_id='PAQ_ModernCool_32', pixel_render_palettes=FakeCollection())
+    text = gpl_text_from_scene_palette(scene)
+    assert 'Name: PAQ_ModernCool_32' in text
+    assert parse_gpl(text) == [hex_to_rgba(h) for h in BUILTIN_PALETTES['PAQ_ModernCool_32']]
+
+
+def test_sync_selected_palette_color_does_not_duplicate_builtin_palette():
+    from pixel_art_render_quantizer.properties import sync_selected_palette_color
+
+    scene = SimpleNamespace(
+        pixel_render_palettes=FakeCollection(),
+        pixel_render_look_palette_id='PAQ_ModernCool_08',
+        pixel_render_selected_color_index=1,
+        pixel_render_selected_color=(0, 0, 0, 1),
+        pixel_render_selected_color_reserved=False,
+        pixel_render_selected_color_quantization_enabled=False,
+        pixel_render_selected_color_use_as_outline=False,
+    )
+    sync_selected_palette_color(scene)
+    assert len(scene.pixel_render_palettes) == 0
+    assert scene.pixel_render_selected_color == hex_to_rgba(BUILTIN_PALETTES['PAQ_ModernCool_08'][1])
+    assert scene.pixel_render_selected_color_quantization_enabled is True
+
+
+def test_apply_selected_palette_reserved_only_preserves_color_value():
+    from pixel_art_render_quantizer.properties import _apply_selected_palette_color, sync_selected_palette_color
+
+    pal = SimpleNamespace(id='custom', name='Custom', type='CUSTOM_SCENE', colors=FakeCollection(), outline_index=0, usable_color_count=0)
+    original = (0.25, 0.5, 0.75, 1.0)
+    pal.colors.append(SimpleNamespace(color=original, reserved=False, quantization_enabled=True, use_as_outline=False))
+    scene = SimpleNamespace(
+        pixel_render_palettes=FakeCollection([pal]),
+        pixel_render_look_palette_id='custom',
+        pixel_render_selected_color_index=0,
+        pixel_render_selected_color=(0, 0, 0, 1),
+        pixel_render_selected_color_reserved=False,
+        pixel_render_selected_color_quantization_enabled=True,
+        pixel_render_selected_color_use_as_outline=False,
+    )
+    sync_selected_palette_color(scene)
+    scene.pixel_render_selected_color_reserved = True
+    _apply_selected_palette_color(scene, None)
+    assert pal.colors[0].color == original
+    assert pal.colors[0].reserved is True

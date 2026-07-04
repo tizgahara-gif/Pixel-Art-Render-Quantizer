@@ -11,10 +11,10 @@ from .image_output import pixels_to_image, show_image_in_editors
 
 def palette_for_scene(scene, palette_id):
     if palette_id in BUILTIN_PALETTES:
-        colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]; return colors, default_reserved_indices(colors), max(1,len(colors)-len(default_reserved_indices(colors)))
+        colors=[hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]; reserved=default_reserved_indices(colors); return colors, reserved, max(1,len(colors)-len(reserved)), list(range(len(colors)))
     for p in scene.pixel_render_palettes:
         if p.id==palette_id:
-            return [c.color[:] for c in p.colors], [i for i,c in enumerate(p.colors) if c.reserved], p.usable_color_count
+            return [c.color[:] for c in p.colors], [i for i,c in enumerate(p.colors) if c.reserved], p.usable_color_count, [i for i,c in enumerate(p.colors) if c.quantization_enabled]
     raise ValueError('No valid palette selected')
 
 def individual_mode_error(scene):
@@ -23,8 +23,8 @@ def individual_mode_error(scene):
     return None
 
 def process_pixels(scene, pixels, w, h):
-    colors,reserved,usable=palette_for_scene(scene, scene.pixel_render_look_palette_id)
-    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation)
+    colors,reserved,usable,enabled=palette_for_scene(scene, scene.pixel_render_look_palette_id)
+    q=quantize_pixels(pixels,w,h,colors,reserved,usable,scene.pixel_render_dither_mode,scene.pixel_render_dither_strength,enabled_indices=enabled,gamma=scene.pixel_render_gamma,exposure=scene.pixel_render_exposure,contrast=scene.pixel_render_contrast,saturation=scene.pixel_render_saturation)
     q=apply_alpha(q,w,h,scene.pixel_render_alpha_mode,scene.pixel_render_alpha_threshold)
     if scene.pixel_render_outline_enabled:
         oi=reserved[0] if reserved else min(range(len(colors)), key=lambda i:luminance(colors[i])); q=apply_outline(q,w,h,colors[oi])

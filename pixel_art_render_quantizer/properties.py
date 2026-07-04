@@ -39,40 +39,82 @@ def default_reserved_indices(colors):
 
 _palette_edit_syncing = False
 
-def _selected_palette_color(scene):
-    from .operators_palette import ensure_editable_palette, clamp_selected_color_index
-    pal = ensure_editable_palette(scene)
-    idx = clamp_selected_color_index(scene, pal)
-    return pal, idx, pal.colors[idx] if len(pal.colors) else None
+def _scene_palette(scene, palette_id):
+    for pal in scene.pixel_render_palettes:
+        if pal.id == palette_id:
+            return pal
+    return None
 
-def _load_selected_palette_color(self, context):
+def _read_selected_palette_color(scene):
+    """Return the currently selected palette color without making built-ins editable."""
+    from .operators_palette import clamp_selected_color_index
+
+    palette_id = scene.pixel_render_look_palette_id
+    if palette_id in BUILTIN_PALETTES:
+        colors = [hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]]
+        if not colors:
+            return None, 0, None
+        idx = max(0, min(scene.pixel_render_selected_color_index, len(colors) - 1))
+        if scene.pixel_render_selected_color_index != idx:
+            scene.pixel_render_selected_color_index = idx
+        reserved = set(default_reserved_indices(colors))
+        return None, idx, {
+            "color": colors[idx],
+            "reserved": idx in reserved,
+            "quantization_enabled": True,
+            "use_as_outline": idx in reserved,
+        }
+
+    pal = _scene_palette(scene, palette_id)
+    if pal is None:
+        return None, 0, None
+    idx = clamp_selected_color_index(scene, pal)
+    if len(pal.colors) <= 0:
+        return pal, idx, None
+    color = pal.colors[idx]
+    return pal, idx, {
+        "color": color.color[:],
+        "reserved": color.reserved,
+        "quantization_enabled": color.quantization_enabled,
+        "use_as_outline": color.use_as_outline,
+    }
+
+def sync_selected_palette_color(scene):
+    """Copy the selected palette entry into the Scene edit properties without writing back."""
     global _palette_edit_syncing
     if _palette_edit_syncing:
         return
     try:
-        pal, idx, color = _selected_palette_color(self)
+        pal, idx, color = _read_selected_palette_color(scene)
     except Exception:
         return
     if color is None:
         return
     _palette_edit_syncing = True
-    self.pixel_render_selected_color = color.color
-    self.pixel_render_selected_color_reserved = color.reserved
-    self.pixel_render_selected_color_quantization_enabled = color.quantization_enabled
-    self.pixel_render_selected_color_use_as_outline = color.use_as_outline
-    _palette_edit_syncing = False
+    try:
+        scene.pixel_render_selected_color = color["color"]
+        scene.pixel_render_selected_color_reserved = color["reserved"]
+        scene.pixel_render_selected_color_quantization_enabled = color["quantization_enabled"]
+        scene.pixel_render_selected_color_use_as_outline = color["use_as_outline"]
+    finally:
+        _palette_edit_syncing = False
+
+def _load_selected_palette_color(self, context):
+    sync_selected_palette_color(self)
 
 def _apply_selected_palette_color(self, context):
     global _palette_edit_syncing
     if _palette_edit_syncing:
         return
-    from .operators_palette import set_outline_color
+    from .operators_palette import ensure_editable_palette, clamp_selected_color_index, set_outline_color
     try:
-        pal, idx, color = _selected_palette_color(self)
+        pal = ensure_editable_palette(self)
+        idx = clamp_selected_color_index(self, pal)
     except Exception:
         return
-    if color is None:
+    if len(pal.colors) <= 0:
         return
+    color = pal.colors[idx]
     color.color = self.pixel_render_selected_color
     color.reserved = self.pixel_render_selected_color_reserved
     color.quantization_enabled = self.pixel_render_selected_color_quantization_enabled
@@ -108,7 +150,7 @@ if bpy:
         s.pixel_render_scale = bpy.props.EnumProperty(items=SCALE_ITEMS, default="4")
         s.pixel_render_lock_aspect = bpy.props.BoolProperty(default=True)
         s.pixel_render_sync_blender_resolution = bpy.props.BoolProperty(default=False)
-        s.pixel_render_look_palette_id = bpy.props.EnumProperty(items=_palette_enum, default=DEFAULT_PALETTE_ID)
+        s.pixel_render_look_palette_id = bpy.props.EnumProperty(items=_palette_enum, default=DEFAULT_PALETTE_ID, update=_load_selected_palette_color)
         s.pixel_render_global_palette_id = bpy.props.EnumProperty(items=_palette_enum, default=DEFAULT_PALETTE_ID)
         s.pixel_render_background_palette_id = bpy.props.EnumProperty(items=_palette_enum, default=DEFAULT_PALETTE_ID)
         s.pixel_render_background_collection_id = bpy.props.StringProperty(default="")

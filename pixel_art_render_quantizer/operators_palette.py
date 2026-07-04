@@ -94,15 +94,21 @@ def set_outline_color(pal, index, enabled):
     else:
         pal.colors[index].use_as_outline = False
 
+def gpl_text_from_scene_palette(scene):
+    palette_id = scene.pixel_render_look_palette_id
+    if palette_id in BUILTIN_PALETTES:
+        return write_gpl(palette_id, [hex_to_rgba(h) for h in BUILTIN_PALETTES[palette_id]])
+    for p in scene.pixel_render_palettes:
+        if p.id == palette_id:
+            return write_gpl(p.name, [c.color[:] for c in p.colors])
+    raise ValueError('Select a valid palette to export')
+
 def export_gpl_from_scene(scene, filepath):
     if not filepath:
         raise ValueError('GPL filepath is empty')
     if not filepath.lower().endswith('.gpl'):
         filepath += '.gpl'
-    for p in scene.pixel_render_palettes:
-        if p.id==scene.pixel_render_look_palette_id:
-            open(filepath,'w',encoding='utf-8').write(write_gpl(p.name,[c.color[:] for c in p.colors])); return filepath
-    raise ValueError('Select a custom or imported palette to export')
+    open(filepath,'w',encoding='utf-8').write(gpl_text_from_scene_palette(scene)); return filepath
 
 if bpy:
  class PAQ_OT_duplicate_palette(bpy.types.Operator):
