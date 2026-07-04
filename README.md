@@ -42,6 +42,20 @@ State symbols:
 
 Built-in palettes are read-only. To change the color limit for a built-in palette, use **Change Limit (Duplicate as Custom)** and edit the duplicated Custom Palette.
 
+## Palette Assignment Curve
+
+**Palette Assignment Curve** remaps the rendered pixel luminance before nearest palette color matching. It does not edit or regenerate palette colors; it only changes which existing palette color each processed pixel is likely to be assigned to.
+
+Enable **Palette Assignment Curve** in **Advanced Look** to adjust the five stable Value / Luminance points: **Black**, **Shadow**, **Mid**, **Light**, and **White**. Use **Curve Strength** to blend between the original luminance and the curve result, and **Reset Curve** to restore the identity curve.
+
+Examples:
+
+- Lowering **Shadow** makes darker regions more likely to match darker palette colors.
+- Raising **Mid** makes midtones more likely to match brighter palette colors.
+- Lowering **Light** helps highlights avoid jumping too quickly to near-white palette colors.
+
+Japanese: パレット色へ割り当てる前に、明度カーブで入力色を補正します。
+
 ## Camera Frame Sync
 
 Camera Frame Sync synchronizes Blender's Render Resolution to the Pixel Render settings.

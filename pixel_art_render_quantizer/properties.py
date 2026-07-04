@@ -227,6 +227,13 @@ if bpy:
         s.pixel_render_exposure = bpy.props.FloatProperty(default=0.0, min=-5, max=5)
         s.pixel_render_contrast = bpy.props.FloatProperty(default=1.0, min=0, max=4)
         s.pixel_render_saturation = bpy.props.FloatProperty(default=1.0, min=0, max=4)
+        s.pixel_render_assignment_curve_enabled = bpy.props.BoolProperty(name="Palette Assignment Curve", default=False, description="Remap luminance before palette color matching")
+        s.pixel_render_assignment_curve_strength = bpy.props.FloatProperty(name="Curve Strength", default=1.0, min=0.0, max=1.0, description="Blend amount for the palette assignment curve")
+        s.pixel_render_assignment_curve_black = bpy.props.FloatProperty(name="Black", default=0.0, min=0.0, max=1.0)
+        s.pixel_render_assignment_curve_shadow = bpy.props.FloatProperty(name="Shadow", default=0.25, min=0.0, max=1.0)
+        s.pixel_render_assignment_curve_mid = bpy.props.FloatProperty(name="Mid", default=0.5, min=0.0, max=1.0)
+        s.pixel_render_assignment_curve_light = bpy.props.FloatProperty(name="Light", default=0.75, min=0.0, max=1.0)
+        s.pixel_render_assignment_curve_white = bpy.props.FloatProperty(name="White", default=1.0, min=0.0, max=1.0)
         s.pixel_render_alpha_mode = bpy.props.EnumProperty(items=[("PRESERVE","Preserve Alpha",""),("SOLID_THRESHOLD","Solid Threshold",""),("DITHERED","Dithered Alpha","")], default="PRESERVE")
         s.pixel_render_alpha_threshold = bpy.props.FloatProperty(default=0.5, min=0, max=1)
         s.pixel_render_dither_mode = bpy.props.EnumProperty(items=[("NONE","None",""),("BAYER4","Bayer 4x4","")], default="NONE")
@@ -255,7 +262,15 @@ if bpy:
             'pixel_render_look_palette_id', 'pixel_render_global_palette_id',
             'pixel_render_background_palette_id', 'pixel_render_background_collection_id',
             'pixel_render_gamma', 'pixel_render_exposure', 'pixel_render_contrast',
-            'pixel_render_saturation', 'pixel_render_alpha_mode', 'pixel_render_alpha_threshold',
+            'pixel_render_saturation',
+            'pixel_render_assignment_curve_enabled',
+            'pixel_render_assignment_curve_strength',
+            'pixel_render_assignment_curve_black',
+            'pixel_render_assignment_curve_shadow',
+            'pixel_render_assignment_curve_mid',
+            'pixel_render_assignment_curve_light',
+            'pixel_render_assignment_curve_white',
+            'pixel_render_alpha_mode', 'pixel_render_alpha_threshold',
             'pixel_render_dither_mode', 'pixel_render_dither_strength',
             'pixel_render_outline_enabled', 'pixel_render_outline_mode',
             'pixel_render_outline_color_mode', 'pixel_render_output_path',

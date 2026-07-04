@@ -198,4 +198,16 @@ if bpy:
         try: export_gpl_from_scene(context.scene, self.filepath)
         except Exception as exc: self.report({'ERROR'},f'Failed to export .gpl: {exc}'); return {'CANCELLED'}
         return {'FINISHED'}
- classes=(PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+
+ class PAQ_OT_reset_assignment_curve(bpy.types.Operator):
+    bl_idname='paq.reset_assignment_curve'; bl_label='Reset Assignment Curve'; bl_options={'REGISTER','UNDO'}
+    def execute(self,context):
+        s=context.scene
+        s.pixel_render_assignment_curve_strength=1.0
+        s.pixel_render_assignment_curve_black=0.0
+        s.pixel_render_assignment_curve_shadow=0.25
+        s.pixel_render_assignment_curve_mid=0.5
+        s.pixel_render_assignment_curve_light=0.75
+        s.pixel_render_assignment_curve_white=1.0
+        return {'FINISHED'}
+ classes=(PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
