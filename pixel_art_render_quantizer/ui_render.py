@@ -168,6 +168,7 @@ if bpy:
         box.label(text=tr(s, 'palette_grid'))
         entries = palette_display_entries(s)
         box.label(text=tr(s, 'grid_help'))
+        box.label(text=tr(s, 'grid_index_above_chip_help'))
         box.label(text=tr(s, 'grid_chip_help'))
         box.label(text=tr(s, 'grid_legend'))
         if entries:
@@ -183,9 +184,9 @@ if bpy:
                     label += ' X'
                 if entry['use_as_outline']:
                     label += ' O'
-                display_label = label
                 if selected:
-                    display_label = f'▶ {display_label}'
+                    label = f'▶ {label}'
+                cell.label(text=label)
                 icon_value = get_color_icon_value(
                     s.pixel_render_look_palette_id,
                     entry['index'],
@@ -193,7 +194,7 @@ if bpy:
                 )
                 op = cell.operator(
                     'paq.select_palette_grid_color',
-                    text=display_label,
+                    text='',
                     icon_value=icon_value,
                 )
                 op.index = entry['index']
