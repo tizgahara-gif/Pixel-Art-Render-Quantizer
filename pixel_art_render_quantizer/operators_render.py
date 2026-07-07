@@ -53,22 +53,32 @@ if bpy:
         if mode_error: self.report({'ERROR'},mode_error); return {'CANCELLED'}
         if save and not s.pixel_render_output_path: self.report({'ERROR'},'Output path is not set'); return {'CANCELLED'}
         requested_w,requested_h=s.pixel_render_width,s.pixel_render_height
+        progress=getattr(context.window_manager, 'progress_begin', None)
+        progress_update=getattr(context.window_manager, 'progress_update', None)
+        progress_end=getattr(context.window_manager, 'progress_end', None)
+        if progress: progress(0, 5)
         try:
+            if progress_update: progress_update(1)
             pixels,actual_w,actual_h=render_lowres_to_pixels(s,requested_w,requested_h)
         except Exception as exc:
+            if progress_end: progress_end()
             self.report({'ERROR'},f'Low-resolution render failed: {exc}')
             return {'CANCELLED'}
         if (actual_w,actual_h) != (requested_w,requested_h):
             self.report({'WARNING'},f'Rendered size differs from Pixel Render Size: requested={requested_w}x{requested_h}, actual={actual_w}x{actual_h}. Using actual size.')
         try:
+            if progress_update: progress_update(2)
             low=process_pixels(s,pixels,actual_w,actual_h)
         except ValueError as exc:
+            if progress_end: progress_end()
             self.report({'ERROR'},str(exc))
             return {'CANCELLED'}
         unique_count=count_unique_rgb(low)
         self.report({'INFO'},f'Palette applied: {s.pixel_render_look_palette_id}, unique RGB colors={unique_count}')
+        if progress_update: progress_update(3)
         up,uw,uh=upscale_nearest(low,actual_w,actual_h,int(s.pixel_render_scale))
         image_name = 'Pixel_Render_Check' if not save else 'Pixel_Render_Quantized'
+        if progress_update: progress_update(4)
         out=pixels_to_image(image_name,up,uw,uh)
         shown = show_image_in_editors(out,context)
         if not save:
@@ -87,6 +97,8 @@ if bpy:
             if s.pixel_render_save_upscaled: out.filepath_raw=os.path.join(base,'pixel_render_upscaled.png'); out.file_format='PNG'; out.save()
             if s.pixel_render_save_quantized_lowres:
                 lowimg=pixels_to_image('Pixel_Render_Lowres_Quantized',low,actual_w,actual_h); lowimg.filepath_raw=os.path.join(base,'pixel_render_lowres_quantized.png'); lowimg.file_format='PNG'; lowimg.save()
+        if progress_update: progress_update(5)
+        if progress_end: progress_end()
         return {'FINISHED'}
  class PAQ_OT_quick_render_check(bpy.types.Operator,_RenderBase):
     bl_idname='paq.quick_render_check'; bl_label='Quick Render Check'; bl_options={'REGISTER'}

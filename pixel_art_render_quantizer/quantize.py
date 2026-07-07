@@ -1,6 +1,9 @@
 """sRGB RGB-distance quantization and look adjustment."""
 from __future__ import annotations
 from .utils import hex_to_rgba
+import importlib.util
+
+_HAS_NUMPY = importlib.util.find_spec("numpy") is not None
 
 def select_usable_colors(colors, reserved_indices=(), usable_color_count=0, enabled_indices=None):
     reserved = set(reserved_indices or [])
@@ -160,10 +163,7 @@ def nearest_color(pixel, palette):
     r, g, b = pixel[:3]
     return min(palette, key=lambda c: (r-c[0])**2 + (g-c[1])**2 + (b-c[2])**2)
 
-def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, enabled_indices=None, assignment_curve_enabled=False, assignment_curve_lut=None, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
-    usable = select_usable_colors(palette_colors, reserved_indices, usable_color_count, enabled_indices)
-    if not usable:
-        raise ValueError("Palette has no active quantization colors")
+def _quantize_pixels_python(pixels, width, height, usable, dither_mode="NONE", dither_strength=0.0, assignment_curve_enabled=False, assignment_curve_lut=None, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
     out=[]
     from .dither import bayer4_offset
     for y in range(height):
@@ -178,3 +178,58 @@ def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), 
                 p = tuple(max(0, min(1, p[i] + off)) if i < 3 else p[i] for i in range(4))
             out.append((*nearest_color(p, usable)[:3], p[3]))
     return out
+
+
+def _quantize_pixels_numpy(pixels, width, height, usable, dither_mode="NONE", dither_strength=0.0, assignment_curve_enabled=False, assignment_curve_lut=None, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
+    import numpy as np
+
+    arr = np.asarray(pixels, dtype=np.float64).reshape((int(height), int(width), 4)).copy()
+    rgb = np.clip(arr[..., :3], 0.0, 1.0)
+
+    gamma = float(look.get("gamma", 1.0))
+    if gamma != 1.0:
+        rgb = np.power(rgb, 1.0 / max(gamma, 1e-6))
+    exposure = float(look.get("exposure", 0.0))
+    if exposure:
+        rgb = np.clip(rgb * (2 ** exposure), 0.0, 1.0)
+    contrast = float(look.get("contrast", 1.0))
+    if contrast != 1.0:
+        rgb = np.clip((rgb - 0.5) * contrast + 0.5, 0.0, 1.0)
+    saturation = float(look.get("saturation", 1.0))
+    if saturation != 1.0:
+        lum = rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722
+        rgb = np.clip(lum[..., None] + (rgb - lum[..., None]) * saturation, 0.0, 1.0)
+
+    if assignment_curve_enabled and (assignment_curve_lut or assignment_curve_points):
+        lut = assignment_curve_lut or build_assignment_curve_lut_from_points(assignment_curve_points, size=256)
+        lut_arr = np.asarray(lut, dtype=np.float64)
+        lum = np.clip(rgb[..., 0] * 0.2126 + rgb[..., 1] * 0.7152 + rgb[..., 2] * 0.0722, 0.0, 1.0)
+        idx = np.rint(lum * (len(lut_arr) - 1)).astype(np.int64)
+        mapped = np.clip(lut_arr[idx], 0.0, 1.0)
+        strength = clamp01(assignment_curve_strength)
+        target = lum + (mapped - lum) * strength
+        scale = np.divide(target, lum, out=np.zeros_like(target), where=lum > 1e-6)
+        rgb = np.where((lum <= 1e-6)[..., None], target[..., None], rgb * scale[..., None])
+        rgb = np.clip(rgb, 0.0, 1.0)
+
+    if dither_mode == "BAYER4" and dither_strength:
+        from .dither import BAYER4
+        bayer = (np.asarray(BAYER4, dtype=np.float64) / 15.0 - 0.5) / 8.0
+        offsets = np.tile(bayer, (int(height + 3) // 4, int(width + 3) // 4))[:int(height), :int(width)]
+        rgb = np.clip(rgb + offsets[..., None] * float(dither_strength), 0.0, 1.0)
+
+    palette = np.asarray([c[:3] for c in usable], dtype=np.float64)
+    flat = rgb.reshape((-1, 3))
+    indices = np.argmin(np.sum((flat[:, None, :] - palette[None, :, :]) ** 2, axis=2), axis=1)
+    quantized_rgb = palette[indices].reshape((int(height), int(width), 3))
+    out = np.concatenate((quantized_rgb, arr[..., 3:4]), axis=2).reshape((-1, 4))
+    return [tuple(float(v) for v in px) for px in out]
+
+
+def quantize_pixels(pixels, width, height, palette_colors, reserved_indices=(), usable_color_count=0, dither_mode="NONE", dither_strength=0.0, enabled_indices=None, assignment_curve_enabled=False, assignment_curve_lut=None, assignment_curve_points=None, assignment_curve_strength=1.0, **look):
+    usable = select_usable_colors(palette_colors, reserved_indices, usable_color_count, enabled_indices)
+    if not usable:
+        raise ValueError("Palette has no active quantization colors")
+    if _HAS_NUMPY:
+        return _quantize_pixels_numpy(pixels, width, height, usable, dither_mode, dither_strength, assignment_curve_enabled, assignment_curve_lut, assignment_curve_points, assignment_curve_strength, **look)
+    return _quantize_pixels_python(pixels, width, height, usable, dither_mode, dither_strength, assignment_curve_enabled, assignment_curve_lut, assignment_curve_points, assignment_curve_strength, **look)

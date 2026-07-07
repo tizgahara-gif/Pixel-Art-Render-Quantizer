@@ -12,6 +12,9 @@ except ModuleNotFoundError:  # allows algorithm tests outside Blender
 SCALE_ITEMS = [(str(v), f"x{v}", "") for v in (1, 2, 3, 4, 5, 6, 8)]
 MODE_ITEMS = [("ALL_IN_ONE", "ALL in ONE", "Single palette for entire render"), ("INDIVIDUAL", "Individual Palette Mode", "Object and background palette assignment")]
 PRESET_ITEMS = [("128x128", "Sprite / Icon", "128 x 128"), ("256x256", "Character Preview", "256 x 256"), ("320x180", "16:9 Small Scene", "320 x 180"), ("426x240", "16:9 Wide Preview", "426 x 240"), ("320x240", "4:3 Retro Scene", "320 x 240"), ("640x360", "Large Pixel Render", "640 x 360")]
+_ENUM_CACHE = []
+MAX_PIXEL_RENDER_DIMENSION = 1024
+
 CAMERA_FRAME_SYNC_ITEMS = [
     ("NONE", "Do Not Sync", "Do not change Blender render resolution"),
     ("LOWRES", "Sync Pixel Render Size", "Set Blender render resolution to the low-resolution Pixel Render Size"),
@@ -19,12 +22,14 @@ CAMERA_FRAME_SYNC_ITEMS = [
 ]
 
 def _palette_enum(self, context):
+    global _ENUM_CACHE
     items = [(pid, name, "Built-in palette") for pid, name in [(k, k) for k in BUILTIN_PALETTES]]
     scene = getattr(context, "scene", None)
     if scene:
         for pal in scene.pixel_render_palettes:
             items.append((pal.id, pal.name, pal.type))
-    return items
+    _ENUM_CACHE = items
+    return _ENUM_CACHE
 
 def pixel_render_final_size(scene):
     width = int(scene.pixel_render_width)
@@ -221,8 +226,8 @@ if bpy:
         )
         s.pixel_render_mode = bpy.props.EnumProperty(items=MODE_ITEMS, default="ALL_IN_ONE")
         s.pixel_render_resolution_preset = bpy.props.EnumProperty(items=PRESET_ITEMS + [("CUSTOM", "Custom", "")], default="320x180", update=_apply_preset)
-        s.pixel_render_width = bpy.props.IntProperty(default=320, min=1, update=_sync_resolution)
-        s.pixel_render_height = bpy.props.IntProperty(default=180, min=1, update=_sync_resolution)
+        s.pixel_render_width = bpy.props.IntProperty(default=320, min=1, max=MAX_PIXEL_RENDER_DIMENSION, update=_sync_resolution)
+        s.pixel_render_height = bpy.props.IntProperty(default=180, min=1, max=MAX_PIXEL_RENDER_DIMENSION, update=_sync_resolution)
         s.pixel_render_scale = bpy.props.EnumProperty(items=SCALE_ITEMS, default="4", update=_sync_resolution)
         s.pixel_render_lock_aspect = bpy.props.BoolProperty(default=True)
         s.pixel_render_camera_frame_sync_mode = bpy.props.EnumProperty(items=CAMERA_FRAME_SYNC_ITEMS, default="FINAL", update=_sync_resolution)
