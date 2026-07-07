@@ -119,6 +119,38 @@ def test_temporary_render_resolution_restores_percentage_on_exception():
     assert (scene.render.use_border, scene.render.use_crop_to_border) == (True, True)
 
 
+def test_temporary_render_resolution_can_disable_and_restore_compositor_flags():
+    scene = SimpleNamespace(render=SimpleNamespace(
+        resolution_x=1920,
+        resolution_y=1080,
+        resolution_percentage=50,
+        use_border=True,
+        use_crop_to_border=True,
+        use_compositing=True,
+        use_sequencer=True,
+    ))
+    with temporary_render_resolution(scene, 320, 180, disable_compositing=True):
+        assert scene.render.use_compositing is False
+        assert scene.render.use_sequencer is False
+    assert scene.render.use_compositing is True
+    assert scene.render.use_sequencer is True
+
+
+def test_temporary_render_resolution_allows_missing_compositor_flags():
+    scene = SimpleNamespace(render=SimpleNamespace(
+        resolution_x=1920,
+        resolution_y=1080,
+        resolution_percentage=50,
+        use_border=True,
+        use_crop_to_border=True,
+    ))
+    with temporary_render_resolution(scene, 320, 180, disable_compositing=True):
+        assert not hasattr(scene.render, 'use_compositing')
+        assert not hasattr(scene.render, 'use_sequencer')
+    assert not hasattr(scene.render, 'use_compositing')
+    assert not hasattr(scene.render, 'use_sequencer')
+
+
 def test_load_gpl_into_scene_empty_path_cancels_before_open():
     scene = SimpleNamespace(pixel_render_palettes=FakeCollection(), pixel_render_look_palette_id='')
     with pytest.raises(ValueError, match='empty'):
