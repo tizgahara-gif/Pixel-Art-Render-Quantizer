@@ -6,8 +6,17 @@ import tempfile
 try: import bpy
 except ModuleNotFoundError: bpy=None
 
+def _get_render_bool(render, name, default=None):
+    return getattr(render, name, default)
+
+
+def _set_render_bool_if_available(render, name, value):
+    if hasattr(render, name):
+        setattr(render, name, value)
+
+
 @contextmanager
-def temporary_render_resolution(scene, width, height):
+def temporary_render_resolution(scene, width, height, disable_compositing=False):
     old=(
         scene.render.resolution_x,
         scene.render.resolution_y,
@@ -15,10 +24,16 @@ def temporary_render_resolution(scene, width, height):
         scene.render.use_border,
         scene.render.use_crop_to_border,
     )
+    old_use_compositing = _get_render_bool(scene.render, "use_compositing")
+    old_use_sequencer = _get_render_bool(scene.render, "use_sequencer")
+
     scene.render.resolution_x, scene.render.resolution_y = width, height
     scene.render.resolution_percentage = 100
     scene.render.use_border = False
     scene.render.use_crop_to_border = False
+    if disable_compositing:
+        _set_render_bool_if_available(scene.render, "use_compositing", False)
+        _set_render_bool_if_available(scene.render, "use_sequencer", False)
     try:
         yield
     finally:
@@ -29,6 +44,10 @@ def temporary_render_resolution(scene, width, height):
             scene.render.use_border,
             scene.render.use_crop_to_border,
         ) = old
+        if old_use_compositing is not None:
+            _set_render_bool_if_available(scene.render, "use_compositing", old_use_compositing)
+        if old_use_sequencer is not None:
+            _set_render_bool_if_available(scene.render, "use_sequencer", old_use_sequencer)
 
 def upscale_nearest(pixels,width,height,scale):
     scale=int(scale); out=[]
@@ -60,6 +79,8 @@ def render_lowres_to_pixels(scene, width, height):
         scene.render.image_settings.color_mode,
         scene.render.image_settings.color_depth,
     )
+    old_use_compositing = _get_render_bool(scene.render, "use_compositing")
+    old_use_sequencer = _get_render_bool(scene.render, "use_sequencer")
 
     temp_dir=tempfile.mkdtemp(prefix="paq_render_")
     temp_path=os.path.join(temp_dir,"paq_lowres.png")
@@ -71,6 +92,8 @@ def render_lowres_to_pixels(scene, width, height):
         scene.render.resolution_percentage=100
         scene.render.use_border=False
         scene.render.use_crop_to_border=False
+        _set_render_bool_if_available(scene.render, "use_compositing", False)
+        _set_render_bool_if_available(scene.render, "use_sequencer", False)
 
         scene.render.filepath=temp_path
         scene.render.image_settings.file_format="PNG"
@@ -108,6 +131,10 @@ def render_lowres_to_pixels(scene, width, height):
             scene.render.image_settings.color_mode,
             scene.render.image_settings.color_depth,
         ) = old
+        if old_use_compositing is not None:
+            _set_render_bool_if_available(scene.render, "use_compositing", old_use_compositing)
+        if old_use_sequencer is not None:
+            _set_render_bool_if_available(scene.render, "use_sequencer", old_use_sequencer)
 
         if temp_img is not None:
             try:
@@ -123,11 +150,14 @@ def render_lowres_to_pixels(scene, width, height):
             pass
 
 
-def render_standard_to_pixels(scene):
+def render_standard_to_pixels(scene, disable_paq_compositor_feedback=False):
     """
     Render using the current Blender render resolution/settings and return
     (pixels, actual_w, actual_h).
     This is used only for palette extraction.
+
+    disable_paq_compositor_feedback is reserved for a future PAQ-specific
+    feedback guard. Palette extraction currently preserves compositor output.
     """
     if bpy is None:
         raise RuntimeError("Blender is required")

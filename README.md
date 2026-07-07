@@ -28,6 +28,24 @@ The preview result is written to an Image named `Pixel_Render_Check`:
 
 Render & Quantize writes the displayed result to `Pixel_Render_Quantized` and saves enabled PNG outputs to the configured output directory.
 
+
+## Quick Render Check Feedback Guard
+
+Quick Render Check renders the low-resolution PAQ source with Blender Compositor and Sequencer output temporarily disabled. This prevents an existing `Pixel_Render_Check` image that is connected to the Compositor `Composite` output from being used as the next PAQ input render.
+
+The Compositor preview/output connection is display-only. It should not be treated as the source for PAQ quantization, and the add-on restores the original `use_compositing` and `use_sequencer` settings after the internal low-resolution render.
+
+Manual regression test:
+
+1. Set **Pixel Render Size** to `320 x 180`.
+2. Set **Scale** to `x4`.
+3. Run **Quick Render Check**.
+4. Confirm `Pixel_Render_Check` is `1280 x 720`.
+5. Confirm the Compositor has `Pixel_Render_Check` Image connected to `Composite`, if using the compositor output helper.
+6. Run **Quick Render Check** again.
+7. Confirm `Pixel_Render_Check` remains `1280 x 720`.
+8. Repeat a third and fourth time and confirm the size remains `1280 x 720`.
+
 ## Palette UI and Color Limits
 
 Palette Grid uses color chips as the visual palette cells.

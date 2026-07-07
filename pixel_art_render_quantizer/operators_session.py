@@ -63,6 +63,9 @@ if bpy:
         if tree is None:
             self.report({'WARNING'}, 'Compositor node tree is not available in this Blender version/context.')
             return {'CANCELLED'}
+        # This compositor connection is display/output helper only.
+        # PAQ source rendering must disable compositor to avoid feeding Pixel_Render_Check
+        # back into the next quantization pass.
         if not tree.nodes.get('PAQ Preview Note'):
             node=tree.nodes.new('NodeFrame'); node.name='PAQ Preview Note'; node.label='Pixel Render preview helper only - final quantization is add-on image processing'
         return {'FINISHED'}
