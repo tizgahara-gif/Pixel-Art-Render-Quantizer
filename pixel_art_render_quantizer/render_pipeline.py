@@ -1,7 +1,10 @@
 from __future__ import annotations
 from contextlib import contextmanager
+import importlib.util
 import os
 import tempfile
+
+_HAS_NUMPY = importlib.util.find_spec("numpy") is not None
 
 try: import bpy
 except ModuleNotFoundError: bpy=None
@@ -50,7 +53,13 @@ def temporary_render_resolution(scene, width, height, disable_compositing=False)
             _set_render_bool_if_available(scene.render, "use_sequencer", old_use_sequencer)
 
 def upscale_nearest(pixels,width,height,scale):
-    scale=int(scale); out=[]
+    scale=int(scale)
+    if _HAS_NUMPY:
+        import numpy as np
+        arr=np.asarray(pixels, dtype=np.float64).reshape((int(height), int(width), 4))
+        up=np.repeat(np.repeat(arr, scale, axis=0), scale, axis=1).reshape((-1, 4))
+        return [tuple(float(v) for v in px) for px in up], width*scale, height*scale
+    out=[]
     for y in range(height):
         row=[]
         for x in range(width): row.extend([pixels[y*width+x]]*scale)
