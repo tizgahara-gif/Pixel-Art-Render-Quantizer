@@ -495,3 +495,28 @@ def test_create_custom_palette_from_colors_sets_scene_custom_defaults():
         (False, True, False),
         (False, True, False),
     ]
+
+
+def test_object_mask_outline_uses_external_dilation_only():
+    from pixel_art_render_quantizer.outline_processing import outline_mask_from_object_mask
+
+    mask = [False] * 25
+    mask[2 * 5 + 2] = True
+    outline = outline_mask_from_object_mask(mask, 5, 5, 1)
+
+    expected = [False] * 25
+    for y in (1, 2, 3):
+        for x in (1, 2, 3):
+            if (x, y) != (2, 2):
+                expected[y * 5 + x] = True
+    assert outline == expected
+
+
+def test_composite_outline_mask_preserves_unrelated_pixels_and_alpha():
+    from pixel_art_render_quantizer.outline_processing import composite_outline_mask
+
+    pixels = [(1.0, 1.0, 1.0, 0.25), (0.0, 0.0, 0.0, 0.5)]
+    result = composite_outline_mask(pixels, [True, False], (0.2, 0.1, 0.0, 0.75))
+
+    assert result[0] == (0.2, 0.1, 0.0, 0.75)
+    assert result[1] == pixels[1]

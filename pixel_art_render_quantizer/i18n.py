@@ -69,6 +69,20 @@ _TRANSLATIONS = {
     "diagnostics_ready": {"EN": "Diagnostics: Ready", "JA": "診断: 準備完了"},
     "diagnostics_inactive": {"EN": "Diagnostics: Pixel Render is inactive.", "JA": "診断: Pixel Renderは無効です。"},
     "background_palette": {"EN": "Background Palette", "JA": "背景パレット"},
+    "outline_enabled": {"EN": "Enable Outline", "JA": "アウトラインを有効化"},
+    "outline_scope": {"EN": "Outline Scope", "JA": "適用対象"},
+    "outline_targets": {"EN": "Outline Targets", "JA": "対象オブジェクト"},
+    "add_selected_objects": {"EN": "Add Selected Objects", "JA": "選択オブジェクトを追加"},
+    "clear_targets": {"EN": "Clear", "JA": "全解除"},
+    "remove_invalid_targets": {"EN": "Remove Invalid", "JA": "無効参照を除去"},
+    "no_outline_targets_warning": {"EN": "No outline targets are registered.", "JA": "アウトライン対象が登録されていません。"},
+    "combined_mask_help": {"EN": "Registered objects are combined into one visible mask; internal target boundaries are not outlined.", "JA": "登録対象は1つの可視マスクに統合され、対象同士の内部境界には線を生成しません。"},
+    "outline_thickness": {"EN": "Thickness", "JA": "太さ"},
+    "outline_thickness_help": {"EN": "Thickness is in low-resolution pixels before nearest-neighbor Scale.", "JA": "太さはNearest Neighbor拡大前の低解像度ピクセル単位です。"},
+    "outline_color": {"EN": "Outline Color", "JA": "アウトライン色"},
+    "selected": {"EN": "Selected", "JA": "選択色"},
+    "custom_color": {"EN": "Custom Color", "JA": "カスタム色"},
+    "transparent_outline_warning": {"EN": "Alpha is zero; the outline will be invisible.", "JA": "アルファが0のためアウトラインは表示されません。"},
 }
 
 

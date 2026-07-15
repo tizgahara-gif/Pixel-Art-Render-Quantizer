@@ -14,7 +14,7 @@ def _neighbors8(x,y,w,h):
                 nx,ny=x+dx,y+dy
                 if 0 <= nx < w and 0 <= ny < h: yield nx,ny
 
-def outline_mask_from_alpha(pixels, width, height):
+def outline_mask_from_alpha(pixels, width, height, thickness=1):
     if _HAS_NUMPY:
         import numpy as np
         alpha = np.asarray([p[3] for p in pixels], dtype=np.float64).reshape((int(height), int(width))) > 0
@@ -28,14 +28,21 @@ def outline_mask_from_alpha(pixels, width, height):
                 dst_y0=max(0,dy); dst_y1=int(height)-max(0,-dy)
                 dst_x0=max(0,dx); dst_x1=int(width)-max(0,-dx)
                 neighbor[dst_y0:dst_y1, dst_x0:dst_x1] |= alpha[src_y0:src_y1, src_x0:src_x1]
-        return cleanup_strict_mask((~alpha & neighbor).reshape(-1).tolist(), width, height)
+        mask = (~alpha & neighbor).reshape(-1).tolist()
+        if int(thickness) <= 1:
+            return cleanup_strict_mask(mask, width, height)
+        from .outline_processing import outline_mask_from_object_mask
+        return outline_mask_from_object_mask([p[3] > 0 for p in pixels], width, height, thickness)
     mask=[False]*(width*height)
     for y in range(height):
         for x in range(width):
             if pixels[_idx(x,y,width)][3] > 0: continue
             if any(pixels[_idx(nx,ny,width)][3] > 0 for nx,ny in _neighbors8(x,y,width,height)):
                 mask[_idx(x,y,width)] = True
-    return cleanup_strict_mask(mask,width,height)
+    if int(thickness) <= 1:
+        return cleanup_strict_mask(mask,width,height)
+    from .outline_processing import outline_mask_from_object_mask
+    return outline_mask_from_object_mask([p[3] > 0 for p in pixels], width, height, thickness)
 
 
 def _cleanup_strict_mask_python(mask,w,h,max_passes=32):
@@ -88,9 +95,10 @@ def cleanup_strict_mask(mask,w,h,max_passes=32):
         print(f"PAQ outline cleanup stopped after {max_passes} passes without convergence")
     return arr.reshape(-1).astype(bool).tolist()
 
-def apply_outline(pixels,w,h,outline_color):
-    mask=outline_mask_from_alpha(pixels,w,h)
+def apply_outline(pixels,w,h,outline_color,thickness=1):
+    mask=outline_mask_from_alpha(pixels,w,h,thickness)
     out=list(pixels)
+    rgba=tuple(outline_color)
     for i,m in enumerate(mask):
-        if m: out[i]=(*outline_color[:3],1.0)
+        if m: out[i]=rgba
     return out

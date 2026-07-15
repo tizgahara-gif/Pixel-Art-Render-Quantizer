@@ -196,6 +196,9 @@ def _apply_selected_palette_color(self, context):
     tag_redraw_all_areas(context)
 
 if bpy:
+    class PAQ_OutlineTargetItem(bpy.types.PropertyGroup):
+        object: bpy.props.PointerProperty(name="Object", type=bpy.types.Object)
+
     class PAQ_PaletteColor(bpy.types.PropertyGroup):
         color: bpy.props.FloatVectorProperty(name="Color", subtype="COLOR", size=4, min=0, max=1, default=(0,0,0,1))
         reserved: bpy.props.BoolProperty(name="Reserved", default=False)
@@ -215,7 +218,7 @@ if bpy:
         usage_tag: bpy.props.StringProperty(default="")
 
     def register_properties():
-        bpy.utils.register_class(PAQ_PaletteColor); bpy.utils.register_class(PAQ_PaletteItem)
+        bpy.utils.register_class(PAQ_OutlineTargetItem); bpy.utils.register_class(PAQ_PaletteColor); bpy.utils.register_class(PAQ_PaletteItem)
         s = bpy.types.Scene
         s.pixel_render_active = bpy.props.BoolProperty(default=False, options=set())
         s.pixel_render_ui_language = bpy.props.EnumProperty(
@@ -250,9 +253,22 @@ if bpy:
         s.pixel_render_alpha_threshold = bpy.props.FloatProperty(default=0.5, min=0, max=1)
         s.pixel_render_dither_mode = bpy.props.EnumProperty(items=[("NONE","None",""),("BAYER4","Bayer 4x4","")], default="NONE")
         s.pixel_render_dither_strength = bpy.props.FloatProperty(default=0.0, min=0, max=1)
-        s.pixel_render_outline_enabled = bpy.props.BoolProperty(name="Strict Alpha Edge Outline", description="v1.0 outline uses alpha edges only; object silhouette/depth outlines are not implemented yet", default=False)
-        s.pixel_render_outline_mode = bpy.props.EnumProperty(items=[("STRICT","Strict Alpha Edge Outline","")], default="STRICT")
-        s.pixel_render_outline_color_mode = bpy.props.EnumProperty(items=[("RESERVED_DARKEST","Use Reserved Darkest Color","")], default="RESERVED_DARKEST")
+        s.pixel_render_outline_enabled = bpy.props.BoolProperty(name="Outline Enabled", description="Generate an outline before nearest-neighbor upscale", default=False)
+        s.pixel_render_outline_scope = bpy.props.EnumProperty(
+            name="Outline Scope",
+            items=[
+                ("ALL_ALPHA", "All Alpha Edges", "Apply outline to the alpha boundary of the complete rendered image"),
+                ("SELECTED_OBJECTS", "Registered Objects Only", "Apply outline only to objects registered in the outline target list"),
+            ],
+            default="ALL_ALPHA",
+        )
+        s.pixel_render_outline_targets = bpy.props.CollectionProperty(type=PAQ_OutlineTargetItem)
+        s.pixel_render_outline_target_index = bpy.props.IntProperty(default=0, min=0)
+        s.pixel_render_outline_thickness = bpy.props.IntProperty(name="Thickness", description="Low-resolution pixels; the visible final width is multiplied by Scale", default=1, min=1, max=32)
+        s.pixel_render_outline_mode = bpy.props.EnumProperty(items=[("STRICT","Object Silhouette","")], default="STRICT")
+        s.pixel_render_outline_color_mode = bpy.props.EnumProperty(items=[("RESERVED_DARKEST","Reserved Darkest","Use the reserved/darkest palette color"),("PALETTE_COLOR","Palette Color","Select a color from the current Look Palette"),("CUSTOM_COLOR","Custom Color","Use the custom outline color")], default="RESERVED_DARKEST")
+        s.pixel_render_outline_palette_color_index = bpy.props.IntProperty(default=0, min=0)
+        s.pixel_render_outline_custom_color = bpy.props.FloatVectorProperty(name="Custom Outline Color", subtype="COLOR", size=4, min=0.0, max=1.0, default=(0.0,0.0,0.0,1.0))
         s.pixel_render_output_path = bpy.props.StringProperty(subtype="DIR_PATH", default="")
         s.pixel_render_save_lowres_source = bpy.props.BoolProperty(default=False)
         s.pixel_render_save_quantized_lowres = bpy.props.BoolProperty(default=True)
@@ -285,8 +301,11 @@ if bpy:
             'pixel_render_assignment_curve_white',
             'pixel_render_alpha_mode', 'pixel_render_alpha_threshold',
             'pixel_render_dither_mode', 'pixel_render_dither_strength',
-            'pixel_render_outline_enabled', 'pixel_render_outline_mode',
-            'pixel_render_outline_color_mode', 'pixel_render_output_path',
+            'pixel_render_outline_enabled', 'pixel_render_outline_scope',
+            'pixel_render_outline_targets', 'pixel_render_outline_target_index',
+            'pixel_render_outline_thickness', 'pixel_render_outline_mode',
+            'pixel_render_outline_color_mode', 'pixel_render_outline_palette_color_index',
+            'pixel_render_outline_custom_color', 'pixel_render_output_path',
             'pixel_render_save_lowres_source', 'pixel_render_save_quantized_lowres',
             'pixel_render_save_upscaled', 'pixel_render_palettes',
             'pixel_render_selected_color_index', 'pixel_render_selected_color',
@@ -300,7 +319,7 @@ if bpy:
         for prop in ('pixel_render_palette_override_enabled', 'pixel_render_palette_id'):
             if hasattr(bpy.types.Object, prop):
                 delattr(bpy.types.Object, prop)
-        for cls in (PAQ_PaletteItem, PAQ_PaletteColor):
+        for cls in (PAQ_PaletteItem, PAQ_PaletteColor, PAQ_OutlineTargetItem):
             try:
                 bpy.utils.unregister_class(cls)
             except RuntimeError:
