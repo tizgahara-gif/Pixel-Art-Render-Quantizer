@@ -495,3 +495,57 @@ def test_create_custom_palette_from_colors_sets_scene_custom_defaults():
         (False, True, False),
         (False, True, False),
     ]
+
+from pixel_art_render_quantizer.operators_palette import palette_sort_key, sort_palette_colors
+
+
+class _FakeColor:
+    def __init__(self, color, reserved=False, quantization_enabled=True, use_as_outline=False):
+        self.color = color
+        self.reserved = reserved
+        self.quantization_enabled = quantization_enabled
+        self.use_as_outline = use_as_outline
+
+
+class _MoveList(list):
+    def move(self, source, target):
+        item = self.pop(source)
+        self.insert(target, item)
+
+
+class _FakePalette:
+    def __init__(self, colors):
+        self.colors = _MoveList(colors)
+
+
+def test_palette_sort_moves_entire_color_items_and_selection_order():
+    dark_reserved = _FakeColor((0.0, 0.0, 0.0, 1.0), reserved=True)
+    bright_outline = _FakeColor((1.0, 1.0, 1.0, 1.0), use_as_outline=True)
+    mid_disabled = _FakeColor((0.5, 0.0, 0.0, 1.0), quantization_enabled=False)
+    palette = _FakePalette([mid_disabled, bright_outline, dark_reserved])
+
+    sorted_order = sort_palette_colors(palette, "LUMINANCE_ASC")
+
+    assert sorted_order == [2, 0, 1]
+    assert palette.colors[0] is dark_reserved
+    assert palette.colors[1] is mid_disabled
+    assert palette.colors[2] is bright_outline
+    assert palette.colors[0].reserved is True
+    assert palette.colors[1].quantization_enabled is False
+    assert palette.colors[2].use_as_outline is True
+
+
+def test_palette_sort_key_supports_all_requested_modes():
+    color = _FakeColor((0.25, 0.5, 0.75, 1.0))
+    modes = (
+        "LUMINANCE_ASC",
+        "LUMINANCE_DESC",
+        "HUE_ASC",
+        "SATURATION_ASC",
+        "SATURATION_DESC",
+        "VALUE_ASC",
+        "VALUE_DESC",
+    )
+
+    for mode in modes:
+        assert palette_sort_key(color, mode) is not None
