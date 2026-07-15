@@ -6,6 +6,7 @@ try:
 except ModuleNotFoundError:
     ImportHelper = ExportHelper = object
 import os
+import colorsys
 from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
 from .properties import default_reserved_indices
 from .utils import hex_to_rgba, new_id, sanitize_palette_name
@@ -76,6 +77,52 @@ def load_gpl_into_scene(scene, filepath):
     return pal
 
 
+
+def _srgb_to_linear(channel):
+    channel = max(0.0, min(1.0, float(channel)))
+    if channel <= 0.04045:
+        return channel / 12.92
+    return ((channel + 0.055) / 1.055) ** 2.4
+
+def _relative_luminance(color):
+    r, g, b = (_srgb_to_linear(c) for c in color[:3])
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+def palette_sort_key(color_item, mode):
+    """Return a deterministic sort key for a palette color item."""
+    rgba = tuple(color_item.color)
+    r, g, b = rgba[:3]
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    luminance = _relative_luminance(rgba)
+    epsilon = 1.0 / 255.0
+    is_achromatic = s < epsilon
+
+    if mode == 'LUMINANCE_DESC':
+        return (-luminance, rgba)
+    if mode == 'HUE_ASC':
+        return (0 if is_achromatic else 1, 0.0 if is_achromatic else h, s, v, luminance, rgba)
+    if mode == 'SATURATION_ASC':
+        return (s, h, v, luminance, rgba)
+    if mode == 'SATURATION_DESC':
+        return (-s, h, v, luminance, rgba)
+    if mode == 'VALUE_ASC':
+        return (v, h, s, luminance, rgba)
+    if mode == 'VALUE_DESC':
+        return (-v, h, s, luminance, rgba)
+    return (luminance, rgba)
+
+def sort_palette_colors(palette, mode):
+    indexed = list(enumerate(palette.colors))
+    sorted_order = [index for index, _color in sorted(indexed, key=lambda item: (palette_sort_key(item[1], mode), item[0]))]
+    current_order = list(range(len(indexed)))
+    for target_index, source_original_index in enumerate(sorted_order):
+        current_index = current_order.index(source_original_index)
+        if current_index != target_index:
+            palette.colors.move(current_index, target_index)
+            moved = current_order.pop(current_index)
+            current_order.insert(target_index, moved)
+    return sorted_order
+
 def find_scene_palette(scene, palette_id):
     for p in scene.pixel_render_palettes:
         if p.id == palette_id:
@@ -138,6 +185,28 @@ def export_gpl_from_scene(scene, filepath):
     open(filepath,'w',encoding='utf-8').write(gpl_text_from_scene_palette(scene)); return filepath
 
 if bpy:
+
+ class PAQ_OT_sort_palette_colors(bpy.types.Operator):
+    bl_idname='paq.sort_palette_colors'; bl_label='Sort Palette Colors'; bl_options={'REGISTER','UNDO'}
+    def execute(self,context):
+        scene=context.scene
+        if scene.pixel_render_look_palette_id in BUILTIN_PALETTES:
+            self.report({'WARNING'}, 'Built-in palettes are read-only. Duplicate as Custom first.')
+            return {'CANCELLED'}
+        pal=find_scene_palette(scene, scene.pixel_render_look_palette_id)
+        if pal is None:
+            self.report({'ERROR'}, 'Select a custom or imported palette')
+            return {'CANCELLED'}
+        if len(pal.colors) <= 1:
+            return {'FINISHED'}
+        selected_index=max(0, min(scene.pixel_render_selected_color_index, len(pal.colors)-1))
+        sorted_indices = sort_palette_colors(pal, scene.pixel_render_palette_sort_mode)
+        if selected_index in sorted_indices:
+            scene.pixel_render_selected_color_index = sorted_indices.index(selected_index)
+        from .properties import sync_selected_palette_color, tag_redraw_all_areas
+        sync_selected_palette_color(scene)
+        tag_redraw_all_areas(context)
+        return {'FINISHED'}
  class PAQ_OT_select_palette_grid_color(bpy.types.Operator):
     bl_idname='paq.select_palette_grid_color'; bl_label='Select Palette Color'; bl_options={'REGISTER','UNDO'}
     index:bpy.props.IntProperty(default=0, min=0)
@@ -325,4 +394,4 @@ if bpy:
                 area.tag_redraw()
 
         return {'FINISHED'}
- classes=(PAQ_OT_initialize_assignment_curve,PAQ_OT_reset_assignment_curve,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)
+ classes=(PAQ_OT_initialize_assignment_curve,PAQ_OT_reset_assignment_curve,PAQ_OT_sort_palette_colors,PAQ_OT_select_palette_grid_color,PAQ_OT_duplicate_palette,PAQ_OT_rename_palette,PAQ_OT_set_palette_usable_color_count,PAQ_OT_delete_palette,PAQ_OT_extract_palette_from_render,PAQ_OT_load_gpl,PAQ_OT_export_gpl)

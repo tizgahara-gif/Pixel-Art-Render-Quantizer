@@ -69,6 +69,19 @@ _TRANSLATIONS = {
     "diagnostics_ready": {"EN": "Diagnostics: Ready", "JA": "診断: 準備完了"},
     "diagnostics_inactive": {"EN": "Diagnostics: Pixel Render is inactive.", "JA": "診断: Pixel Renderは無効です。"},
     "background_palette": {"EN": "Background Palette", "JA": "背景パレット"},
+    "sort": {"EN": "Sort", "JA": "並べ替え"},
+    "sort_luminance_asc": {"EN": "Luminance: Dark to Light", "JA": "明度：暗い → 明るい"},
+    "sort_luminance_desc": {"EN": "Luminance: Light to Dark", "JA": "明度：明るい → 暗い"},
+    "sort_hue": {"EN": "Hue", "JA": "色相順"},
+    "sort_saturation_asc": {"EN": "Saturation: Low to High", "JA": "彩度：低い → 高い"},
+    "sort_saturation_desc": {"EN": "Saturation: High to Low", "JA": "彩度：高い → 低い"},
+    "sort_value_asc": {"EN": "Value: Low to High", "JA": "明るさ：低い → 高い"},
+    "sort_value_desc": {"EN": "Value: High to Low", "JA": "明るさ：高い → 低い"},
+    "duplicate_to_sort": {"EN": "Built-in palettes are read-only. Duplicate as Custom before sorting.", "JA": "内蔵パレットは読み取り専用です。並べ替えるにはカスタムとして複製してください。"},
+    "selected_index": {"EN": "Selected Color", "JA": "選択色"},
+    "enable_outline": {"EN": "Enable Outline", "JA": "アウトラインを有効化"},
+    "extract_palette_description": {"EN": "Extract representative colors from the current standard render.", "JA": "現在の通常レンダーから代表色を抽出します。"},
+    "extract_standard_render_note": {"EN": "This creates a Custom Palette; it does not extract from Pixel_Render_Check.", "JA": "Custom Paletteとして追加します。Pixel_Render_Checkからの抽出ではありません。"},
 }
 
 
