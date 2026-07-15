@@ -17,35 +17,34 @@ def palette_display_entries(scene):
         rgba_colors = [hex_to_rgba(hex_value) for hex_value in BUILTIN_PALETTES[palette_id]]
         reserved_indices = set(default_reserved_indices(rgba_colors))
         return [
-                {
-                    'index': index,
-                    'hex': hex_value,
-                    'rgba': rgba_colors[index],
-                    'reserved': index in reserved_indices,
-                    'quantization_enabled': True,
-                    'use_as_outline': index in reserved_indices,
-                    'color_item': None,
-                }
-                for index, hex_value in enumerate(BUILTIN_PALETTES[palette_id])
-            ]
+            {
+                'index': index,
+                'hex': hex_value,
+                'rgba': rgba_colors[index],
+                'reserved': index in reserved_indices,
+                'quantization_enabled': True,
+                'use_as_outline': index in reserved_indices,
+                'color_item': None,
+            }
+            for index, hex_value in enumerate(BUILTIN_PALETTES[palette_id])
+        ]
 
     for palette in scene.pixel_render_palettes:
         if palette.id == palette_id:
             return [
-                    {
-                        'index': index,
-                        'hex': rgba_to_hex(color.color),
-                        'rgba': color.color[:],
-                        'reserved': color.reserved,
-                        'quantization_enabled': color.quantization_enabled,
-                        'use_as_outline': color.use_as_outline,
-                        'color_item': color,
-                    }
-                    for index, color in enumerate(palette.colors)
-                ]
+                {
+                    'index': index,
+                    'hex': rgba_to_hex(color.color),
+                    'rgba': color.color[:],
+                    'reserved': color.reserved,
+                    'quantization_enabled': color.quantization_enabled,
+                    'use_as_outline': color.use_as_outline,
+                    'color_item': color,
+                }
+                for index, color in enumerate(palette.colors)
+            ]
 
     return []
-
 
 
 def palette_preview_data(scene):
@@ -59,32 +58,6 @@ def palette_preview_data(scene):
                 break
     return {'name': name, 'colors': palette_display_entries(scene)}
 
-def draw_palette_color_swatch(row, entry):
-    """Draw a non-editable color chip without opening Blender's color picker."""
-    try:
-        row.template_node_socket(color=entry['rgba'])
-    except Exception:
-        pass
-
-
-def draw_palette_preview(box, scene):
-    preview = palette_preview_data(scene)
-    colors = preview['colors']
-    box.separator()
-    box.label(text='Palette Preview')
-    box.label(text=f"Palette: {preview['name']}")
-    box.label(text=f"Colors: {len(colors)}")
-    for entry in colors:
-        row = box.row(align=True)
-        row.label(text=f"{entry['index']:02d}")
-        draw_palette_color_swatch(row, entry)
-        if entry['reserved']:
-            row.label(text='Reserved')
-        if not entry['quantization_enabled']:
-            row.label(text='Disabled')
-        if entry['use_as_outline']:
-            row.label(text='Outline')
-
 
 def selected_palette(scene):
     palette_id = scene.pixel_render_look_palette_id
@@ -92,6 +65,7 @@ def selected_palette(scene):
         if palette.id == palette_id:
             return palette
     return None
+
 
 def palette_color_limit_display(scene):
     palette_id = scene.pixel_render_look_palette_id
@@ -101,6 +75,35 @@ def palette_color_limit_display(scene):
         return builtin_default_usable_count(palette_id, len(colors), len(reserved))
     palette = selected_palette(scene)
     return palette.usable_color_count if palette else 0
+
+
+def draw_palette_grid(layout, scene):
+    entries = palette_display_entries(scene)
+    layout.label(text=tr(scene, 'grid_help'))
+    layout.label(text=tr(scene, 'grid_legend'))
+    if not entries:
+        layout.label(text=tr(scene, 'no_colors'), icon='INFO')
+        return
+    grid = layout.grid_flow(row_major=True, columns=0, even_columns=True, even_rows=True, align=True)
+    for entry in entries:
+        cell = grid.column(align=True)
+        selected = entry['index'] == scene.pixel_render_selected_color_index
+        label = f"{entry['index']:02d}"
+        if entry['reserved']:
+            label += ' R'
+        if not entry['quantization_enabled']:
+            label += ' X'
+        if entry['use_as_outline']:
+            label += ' O'
+        if selected:
+            label = f'▶ {label}'
+        cell.label(text=label)
+        op = cell.operator(
+            'paq.select_palette_grid_color',
+            text='',
+            icon_value=get_color_icon_value(scene.pixel_render_look_palette_id, entry['index'], entry['rgba']),
+        )
+        op.index = entry['index']
 
 
 if bpy:
@@ -120,24 +123,8 @@ if bpy:
     def draw(self,context):
         s=context.scene
         l=self.layout
-        status_box = l.box()
-        status_box.label(
-            text=tr(s, 'pixel_render_active') if s.pixel_render_active else tr(s, 'pixel_render_inactive'),
-            icon='CHECKMARK' if s.pixel_render_active else 'CANCEL'
-        )
-
-        status_box.prop(s, 'pixel_render_ui_language', text=tr(s, 'ui_language'))
-
-        if s.pixel_render_active:
-            status_box.label(text=f"{tr(s, 'mode')}: {s.pixel_render_mode}")
-            status_box.label(text=f"{tr(s, 'look_palette')}: {s.pixel_render_look_palette_id}")
-            status_box.label(
-                text=f"{tr(s, 'pixel_size')}: {s.pixel_render_width} x {s.pixel_render_height}  {tr(s, 'scale')}: x{s.pixel_render_scale}"
-            )
-            status_box.label(
-                text=f"{tr(s, 'final_output')}: {s.pixel_render_width * int(s.pixel_render_scale)} x {s.pixel_render_height * int(s.pixel_render_scale)}"
-            )
-
+        l.label(text=tr(s, 'pixel_render_active') if s.pixel_render_active else tr(s, 'pixel_render_inactive'), icon='CHECKMARK' if s.pixel_render_active else 'CANCEL')
+        l.prop(s, 'pixel_render_ui_language', text=tr(s, 'ui_language'))
         row = l.row(align=True)
         if s.pixel_render_active:
             row.operator('paq.stop_pixel_render', text=tr(s, 'stop_pixel_render'), icon='PAUSE')
@@ -201,14 +188,10 @@ if bpy:
         box.label(text=tr(s, 'current_palette'))
         box.prop(s,'pixel_render_look_palette_id',text=tr(s, 'look_palette'))
         is_builtin = s.pixel_render_look_palette_id in BUILTIN_PALETTES
-        palette_type = tr(s, 'built_in') if is_builtin else tr(s, 'custom_external')
-        box.label(text=f"{tr(s, 'palette_type')}: {palette_type}")
-        limit_row = box.row(align=True)
-        limit_row.label(text=f"{tr(s, 'palette_color_limit')}: {palette_color_limit_display(s)}")
-        box.label(text=tr(s, 'reserved_not_counted'))
-        box.label(text=tr(s, 'disabled_not_counted'))
+        l.label(text=f"{tr(s, 'palette_type')}: {tr(s, 'built_in') if is_builtin else tr(s, 'custom_external')}")
         if is_builtin:
-            box.operator('paq.set_palette_usable_color_count', text=tr(s, 'change_limit_duplicate'))
+            l.label(text=f"{tr(s, 'palette_color_limit')}: {palette_color_limit_display(s)}")
+            l.operator('paq.set_palette_usable_color_count', text=tr(s, 'change_limit_duplicate'))
         else:
             palette = selected_palette(s)
             if palette:

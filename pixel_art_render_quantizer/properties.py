@@ -1,6 +1,6 @@
 """Blender property definitions and palette data management."""
 from __future__ import annotations
-from .i18n import LANGUAGE_ITEMS
+from .i18n import LANGUAGE_ITEMS, tr
 from .palettes_builtin import BUILTIN_PALETTES, DEFAULT_PALETTE_ID
 from .utils import hex_to_rgba, luminance, new_id, sanitize_palette_name
 
@@ -20,6 +20,20 @@ CAMERA_FRAME_SYNC_ITEMS = [
     ("LOWRES", "Sync Pixel Render Size", "Set Blender render resolution to the low-resolution Pixel Render Size"),
     ("FINAL", "Sync Final Output Size", "Set Blender render resolution to Pixel Render Size multiplied by Scale"),
 ]
+
+PALETTE_SORT_MODE_KEYS = [
+    ("LUMINANCE_ASC", "sort_luminance_asc", "Sort by relative luminance from dark to light"),
+    ("LUMINANCE_DESC", "sort_luminance_desc", "Sort by relative luminance from light to dark"),
+    ("HUE_ASC", "sort_hue", "Sort by hue; achromatic colors are grouped first"),
+    ("SATURATION_ASC", "sort_saturation_asc", "Sort by saturation from low to high"),
+    ("SATURATION_DESC", "sort_saturation_desc", "Sort by saturation from high to low"),
+    ("VALUE_ASC", "sort_value_asc", "Sort by HSV value from low to high"),
+    ("VALUE_DESC", "sort_value_desc", "Sort by HSV value from high to low"),
+]
+
+def _palette_sort_enum(self, context):
+    scene = getattr(context, "scene", None)
+    return [(identifier, tr(scene or "EN", key), description) for identifier, key, description in PALETTE_SORT_MODE_KEYS]
 
 def _palette_enum(self, context):
     global _ENUM_CACHE
@@ -235,6 +249,7 @@ if bpy:
         s.pixel_render_lock_aspect = bpy.props.BoolProperty(default=True)
         s.pixel_render_camera_frame_sync_mode = bpy.props.EnumProperty(items=CAMERA_FRAME_SYNC_ITEMS, default="FINAL", update=_sync_resolution)
         s.pixel_render_look_palette_id = bpy.props.EnumProperty(items=_palette_enum, update=_load_selected_palette_color)
+        s.pixel_render_palette_sort_mode = bpy.props.EnumProperty(items=_palette_sort_enum, default="LUMINANCE_ASC")
         s.pixel_render_global_palette_id = bpy.props.EnumProperty(items=_palette_enum)
         s.pixel_render_background_palette_id = bpy.props.EnumProperty(items=_palette_enum)
         s.pixel_render_background_collection_id = bpy.props.StringProperty(default="")
@@ -288,7 +303,8 @@ if bpy:
             'pixel_render_mode', 'pixel_render_resolution_preset',
             'pixel_render_width', 'pixel_render_height', 'pixel_render_scale',
             'pixel_render_lock_aspect', 'pixel_render_camera_frame_sync_mode',
-            'pixel_render_look_palette_id', 'pixel_render_global_palette_id',
+            'pixel_render_look_palette_id', 'pixel_render_palette_sort_mode',
+            'pixel_render_global_palette_id',
             'pixel_render_background_palette_id', 'pixel_render_background_collection_id',
             'pixel_render_gamma', 'pixel_render_exposure', 'pixel_render_contrast',
             'pixel_render_saturation',
