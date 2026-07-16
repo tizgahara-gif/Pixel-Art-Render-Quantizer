@@ -520,3 +520,68 @@ def test_composite_outline_mask_preserves_unrelated_pixels_and_alpha():
 
     assert result[0] == (0.2, 0.1, 0.0, 0.75)
     assert result[1] == pixels[1]
+
+
+def test_outline_target_filter_uses_object_references_not_names():
+    from pixel_art_render_quantizer.outline_mask import valid_outline_target_objects
+
+    visible = SimpleNamespace(name='SharedName', type='MESH', hide_render=False)
+    hidden_same_name = SimpleNamespace(name='SharedName', type='MESH', hide_render=False)
+    camera = SimpleNamespace(name='Camera', type='CAMERA', hide_render=False)
+    scene = SimpleNamespace(pixel_render_outline_targets=[
+        SimpleNamespace(object=visible),
+        SimpleNamespace(object=hidden_same_name),
+        SimpleNamespace(object=camera),
+    ])
+    view_layer = SimpleNamespace(objects=[visible])
+
+    objects, skipped = valid_outline_target_objects(scene, view_layer)
+
+    assert objects == [visible]
+    assert skipped == 2
+
+
+def test_temporary_object_index_state_skips_readonly_and_restores():
+    from pixel_art_render_quantizer.outline_mask import TEMP_PASS_INDEX, temporary_object_index_state
+
+    class WritableObject:
+        def __init__(self, pass_index):
+            self.pass_index = pass_index
+
+    class ReadOnlyObject:
+        @property
+        def pass_index(self):
+            return 7
+
+        @pass_index.setter
+        def pass_index(self, value):
+            raise AttributeError('read-only')
+
+    writable = WritableObject(3)
+    readonly = ReadOnlyObject()
+    image_settings = SimpleNamespace(file_format='PNG', color_mode='RGBA', color_depth='8')
+    render = SimpleNamespace(
+        resolution_x=1920,
+        resolution_y=1080,
+        resolution_percentage=50,
+        use_border=True,
+        use_crop_to_border=True,
+        filepath='original.png',
+        image_settings=image_settings,
+        use_compositing=True,
+        use_sequencer=True,
+    )
+    scene = SimpleNamespace(render=render)
+    view_layer = SimpleNamespace(use_pass_object_index=False)
+
+    with temporary_object_index_state(scene, view_layer, [writable, readonly]) as assigned:
+        assert assigned == [writable]
+        assert writable.pass_index == TEMP_PASS_INDEX
+        assert view_layer.use_pass_object_index is True
+        render.resolution_x = 320
+        render.image_settings.file_format = 'OPEN_EXR_MULTILAYER'
+
+    assert writable.pass_index == 3
+    assert view_layer.use_pass_object_index is False
+    assert render.resolution_x == 1920
+    assert render.image_settings.file_format == 'PNG'
