@@ -1,6 +1,8 @@
 try: import bpy
 except ModuleNotFoundError: bpy=None
 from .i18n import tr
+from .palettes_builtin import BUILTIN_PALETTES
+from .properties import builtin_palette_display_name
 if bpy:
  class PAQ_PT_compositor(bpy.types.Panel):
     bl_label='Pixel Render'; bl_space_type='NODE_EDITOR'; bl_region_type='UI'; bl_category='Pixel Render'
@@ -21,7 +23,8 @@ if bpy:
         )
         if s.pixel_render_active:
             col.label(text=f"{tr(s, 'mode')}: {s.pixel_render_mode}")
-            col.label(text=f"{tr(s, 'palette')}: {s.pixel_render_look_palette_id}")
+            palette_name = builtin_palette_display_name(s, s.pixel_render_look_palette_id) if s.pixel_render_look_palette_id in BUILTIN_PALETTES else s.pixel_render_look_palette_id
+            col.label(text=f"{tr(s, 'palette')}: {palette_name}")
             col.label(text=f"{tr(s, 'pixel_size')}: {s.pixel_render_width} x {s.pixel_render_height}")
             col.label(text=f"{tr(s, 'scale')}: x{s.pixel_render_scale}")
             col.label(
