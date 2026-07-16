@@ -1,7 +1,13 @@
 """Blender property definitions and palette data management."""
 from __future__ import annotations
 from .i18n import LANGUAGE_ITEMS, tr
-from .palettes_builtin import BUILTIN_PALETTES, DEFAULT_PALETTE_ID
+from .palettes_builtin import (
+    BUILTIN_PALETTE_DISPLAY_NAME_KEYS,
+    BUILTIN_PALETTE_DISPLAY_NAMES,
+    BUILTIN_PALETTES,
+    DEFAULT_PALETTE_ID,
+    LEGACY_BUILTIN_PALETTE_MAP,
+)
 from .utils import hex_to_rgba, luminance, new_id, sanitize_palette_name
 
 try:
@@ -35,15 +41,44 @@ def _palette_sort_enum(self, context):
     scene = getattr(context, "scene", None)
     return [(identifier, tr(scene or "EN", key), description) for identifier, key, description in PALETTE_SORT_MODE_KEYS]
 
+def builtin_palette_display_name(scene_or_language, palette_id):
+    key = BUILTIN_PALETTE_DISPLAY_NAME_KEYS.get(palette_id)
+    if key:
+        return tr(scene_or_language, key)
+    return BUILTIN_PALETTE_DISPLAY_NAMES.get(palette_id, palette_id)
+
+
 def _palette_enum(self, context):
     global _ENUM_CACHE
-    items = [(pid, name, "Built-in palette") for pid, name in [(k, k) for k in BUILTIN_PALETTES]]
     scene = getattr(context, "scene", None)
+    language_source = scene or "EN"
+    items = [
+        (pid, builtin_palette_display_name(language_source, pid), "Built-in palette")
+        for pid in BUILTIN_PALETTES
+    ]
     if scene:
         for pal in scene.pixel_render_palettes:
             items.append((pal.id, pal.name, pal.type))
     _ENUM_CACHE = items
     return _ENUM_CACHE
+
+
+def migrate_legacy_palette_ids(scene):
+    property_names = (
+        "pixel_render_look_palette_id",
+        "pixel_render_global_palette_id",
+        "pixel_render_background_palette_id",
+    )
+
+    for property_name in property_names:
+        old_id = getattr(scene, property_name, "")
+        new_id = LEGACY_BUILTIN_PALETTE_MAP.get(old_id)
+
+        if new_id:
+            try:
+                setattr(scene, property_name, new_id)
+            except Exception:
+                pass
 
 def pixel_render_final_size(scene):
     width = int(scene.pixel_render_width)

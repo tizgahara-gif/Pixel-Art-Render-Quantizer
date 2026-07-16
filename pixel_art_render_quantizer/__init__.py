@@ -13,12 +13,14 @@ except ModuleNotFoundError: bpy=None
 
 if bpy:
     from bpy.app.handlers import persistent
-    from .properties import register_properties, unregister_properties
+    from .properties import migrate_legacy_palette_ids, register_properties, unregister_properties
     from . import operators_session, operators_render, operators_palette, operators_assignment, operators_outline, ui_compositor, ui_render, ui_viewport, palette_preview_icons
     MODULE_CLASSES = (operators_session.classes + operators_render.classes + operators_palette.classes + operators_assignment.classes + operators_outline.classes + ui_compositor.classes + ui_render.classes + ui_viewport.classes)
     @persistent
     def _paq_load_post(_dummy):
-        for scene in bpy.data.scenes: scene.pixel_render_active = False
+        for scene in bpy.data.scenes:
+            migrate_legacy_palette_ids(scene)
+            scene.pixel_render_active = False
     def register():
         register_properties()
         for cls in MODULE_CLASSES: bpy.utils.register_class(cls)

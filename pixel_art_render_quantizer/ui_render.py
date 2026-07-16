@@ -2,7 +2,7 @@ try: import bpy
 except ModuleNotFoundError: bpy=None
 
 from .palettes_builtin import BUILTIN_PALETTES, builtin_default_usable_count
-from .properties import default_reserved_indices
+from .properties import builtin_palette_display_name, default_reserved_indices
 from .utils import hex_to_rgba, rgba_to_hex
 from .curve_mapping_store import find_assignment_curve_owner
 from .i18n import tr
@@ -51,7 +51,9 @@ def palette_preview_data(scene):
     """Return display-only palette preview data for the selected look palette."""
     palette_id = scene.pixel_render_look_palette_id
     name = palette_id or 'None'
-    if palette_id not in BUILTIN_PALETTES:
+    if palette_id in BUILTIN_PALETTES:
+        name = builtin_palette_display_name(scene, palette_id)
+    else:
         for palette in scene.pixel_render_palettes:
             if palette.id == palette_id:
                 name = palette.name

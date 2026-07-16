@@ -356,7 +356,7 @@ def test_palette_preview_data_reads_builtin_without_scene_mutation():
     preview = palette_preview_data(scene)
     entries = palette_display_entries(scene)
 
-    assert preview['name'] == 'PAQ_ModernCool_08'
+    assert preview['name'] == 'Modern Cool 8'
     assert [entry['hex'] for entry in preview['colors']] == BUILTIN_PALETTES['PAQ_ModernCool_08']
     assert [entry['hex'] for entry in entries] == BUILTIN_PALETTES['PAQ_ModernCool_08']
     assert all(entry['quantization_enabled'] for entry in preview['colors'])
